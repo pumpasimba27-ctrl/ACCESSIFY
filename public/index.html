@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>ACCESSIFY | Premium Streetwear & Gothic Accessories</title>
+
+  <!-- SEO & Social Meta Tags -->
+  <meta name="description"
+    content="ACCESSIFY — Heavyweight gothic & streetwear accessories: 316L stainless steel chains, rings, bracelets, and combo sets. Order directly via WhatsApp at +91 7012400815.">
+  <meta name="keywords"
+    content="Accessify, streetwear jewelry, gothic accessories, chrome hearts accessories, stainless steel chains, WhatsApp shopping">
+  <meta name="author" content="ACCESSIFY">
+
+  <!-- Open Graph / WhatsApp Preview -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ACCESSIFY">
+  <meta property="og:title" content="ACCESSIFY | Premium Streetwear & Gothic Accessories">
+  <meta property="og:description"
+    content="Explore 200+ authentic gothic & streetwear pieces in 316L surgical steel with direct WhatsApp ordering.">
+  <meta property="og:image" content="/assets/images/hero-banner.jpg">
+  <meta property="og:url" content="https://wa.me/917012400815">
+
+  <link rel="icon" href="/assets/images/accessify-logo.png" type="image/png">
+
+  <!-- Premium Typography: Instrument Sans, Inter & Cinzel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+
+  <!-- Main Storefront Stylesheet -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+  <!-- =======================================================================
+       1. TOP ANNOUNCEMENT BAR
+       ======================================================================= -->
+  <aside class="announcement-bar" aria-label="Store Announcements">
+    <div class="announcement-track">
+      <div class="announcement-item">
+        <span class="highlight">⚡ 100% 316L SURGICAL GRADE STAINLESS STEEL</span>
+        <span class="sep">•</span>
+        <span>NEVER TARNISHES &bull; NO GREEN SKIN</span>
+        <span class="sep">•</span>
+        <span class="highlight">💬 DIRECT WHATSAPP ORDERING: +91 7012400815</span>
+        <span class="sep">•</span>
+        <span>🚚 PAN-INDIA FAST DISPATCH IN 24 HOURS</span>
+        <span class="sep">•</span>
+        <span class="highlight">🔥 LIMITED DROPS &bull; RESTOCKS ARE RARE</span>
+      </div>
+      <!-- Duplicate track for seamless infinite loop -->
+      <div class="announcement-item" aria-hidden="true">
+        <span class="highlight">⚡ 100% 316L SURGICAL GRADE STAINLESS STEEL</span>
+        <span class="sep">•</span>
+        <span>NEVER TARNISHES &bull; NO GREEN SKIN</span>
+        <span class="sep">•</span>
+        <span class="highlight">💬 DIRECT WHATSAPP ORDERING: +91 7012400815</span>
+        <span class="sep">•</span>
+        <span>🚚 PAN-INDIA FAST DISPATCH IN 24 HOURS</span>
+        <span class="sep">•</span>
+        <span class="highlight">🔥 LIMITED DROPS &bull; RESTOCKS ARE RARE</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- =======================================================================
+       2. NAVIGATION HEADER
+       ======================================================================= -->
+  <header class="header">
+    <div class="container header-inner">
+
+      <!-- Department Switcher (Desktop & Mobile) -->
+      <div class="header-dept-wrapper">
+        <div class="header-dept-tabs" id="header-dept-tabs" role="tablist" aria-label="Department Switcher">
+          <button type="button" class="header-dept-tab active" data-dept="accessories" role="tab" aria-selected="true">
+            ACCESSORIES
+          </button>
+          <button type="button" class="header-dept-tab" data-dept="clothing" role="tab" aria-selected="false">
+            CLOTHING
+          </button>
+        </div>
+      </div>
+
+      <!-- Desktop Primary Nav (Dynamically updated for active department) -->
+      <nav class="header-nav" id="header-nav" aria-label="Primary Navigation">
+        <!-- Rendered dynamically via app.js -->
+      </nav>
+
+      <!-- Header Action Utilities -->
+      <div class="header-actions">
+        <!-- Search Trigger -->
+        <button type="button" class="header-action-btn" id="search-btn" aria-label="Search Catalog">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </button>
+
+        <!-- Admin Panel Quick Access Button -->
+        <a href="/admin" class="header-admin-btn" aria-label="Admin Dashboard" title="Access Secure Admin Control">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          <span>ADMIN PANEL</span>
+        </a>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- =======================================================================
+       3. MOBILE NAVIGATION DRAWER
+       ======================================================================= -->
+  <div class="mobile-nav-drawer" id="mobile-nav-drawer" aria-hidden="true">
+    <div class="mobile-nav-content">
+      <div class="mobile-nav-header">
+        <span class="logo-text">ACCESSIFY</span>
+        <button type="button" class="header-action-btn" id="mobile-nav-close" aria-label="Close Navigation">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Mobile Department Switcher Box -->
+      <div class="mobile-dept-box">
+        <div class="mobile-dept-label">SELECT DEPARTMENT</div>
+        <div class="mobile-dept-tabs" id="mobile-dept-tabs">
+          <button type="button" class="mobile-dept-tab active" data-dept="accessories">
+            ACCESSORIES
+          </button>
+          <button type="button" class="mobile-dept-tab" data-dept="clothing">
+            CLOTHING
+          </button>
+        </div>
+      </div>
+
+      <nav class="mobile-nav-links" id="mobile-nav-links">
+        <!-- Rendered dynamically via app.js -->
+      </nav>
+
+      <div class="mobile-nav-footer">
+        <a href="/admin" class="btn btn-outline btn-full mobile-admin-link"
+          style="margin-bottom: 0.75rem; border-color: rgba(255, 255, 255, 0.2); font-size: 0.75rem; letter-spacing: 0.12em; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          ADMIN PANEL
+        </a>
+        <a href="https://wa.me/917012400815" target="_blank" rel="noopener noreferrer"
+          class="btn btn-whatsapp btn-full">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.966.527 1.93.811 2.796.811 3.181 0 5.767-2.587 5.768-5.766.001-3.181-2.585-5.798-5.768-5.798zm3.385 8.163c-.145.408-.847.781-1.183.829-.336.048-.775.068-2.223-.529-1.854-.764-3.04-2.653-3.132-2.775-.093-.122-.749-.997-.749-1.902 0-.904.472-1.349.64-1.533.168-.184.368-.23.491-.23.123 0 .245.001.353.007.113.005.263-.043.412.316.153.368.522 1.272.568 1.365.046.092.077.2.015.323-.061.123-.092.2-.184.307-.092.107-.194.24-.277.323-.092.092-.189.193-.081.378.107.185.477.787 1.025 1.275.707.63 1.303.825 1.488.917.184.092.292.077.4-.046.108-.123.461-.537.584-.722.123-.184.246-.153.414-.092.169.061 1.074.507 1.258.6.184.092.307.138.353.215.046.077.046.446-.099.854z" />
+          </svg>
+          ORDER ON WHATSAPP
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       4. SEARCH OVERLAY MODAL
+       ======================================================================= -->
+  <div class="search-modal" id="search-modal" aria-hidden="true">
+    <div class="search-modal-header">
+      <div class="container">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+          <button type="button" class="header-action-btn" id="search-close-btn" aria-label="Close Search">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="search-input-wrapper">
+          <input type="text" id="search-input" class="search-input" placeholder="SEARCH..." autocomplete="off">
+        </div>
+      </div>
+    </div>
+    <div class="search-results-container">
+      <div class="container">
+        <div id="search-result-count" class="section-label" style="margin-bottom: 1.5rem;"></div>
+        <div id="search-results"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       5. HERO SECTION (GENRAGE VISUAL IDENTITY)
+       ======================================================================= -->
+  <section class="hero" id="hero">
+    <div class="hero-bg">
+      <picture>
+        <source srcset="/assets/images/hero-banner.webp?v=6" type="image/webp">
+        <img src="/assets/images/hero-banner.jpg?v=6" alt="ACCESSIFY Luxury Streetwear Accessories" fetchpriority="high"
+          decoding="sync">
+      </picture>
+    </div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-buttons">
+        <button type="button" class="btn btn-primary" id="hero-explore-btn">
+          <span>EXPLORE ARCHIVE</span>
+          <svg class="explore-btn-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       6. INFINITE SCROLLING TICKER MARQUEE
+       ======================================================================= -->
+  <section class="marquee-section" aria-label="Brand Highlights">
+    <div class="marquee-content">
+      <div class="marquee-item">
+        <span>ACCESSIFY ARCHIVE</span>
+        <span class="star">★</span>
+        <span>100% 316L SURGICAL STAINLESS STEEL</span>
+        <span class="star">★</span>
+        <span>WATERPROOF &bull; TARNISH-FREE</span>
+        <span class="star">★</span>
+        <span>ORDER ON WHATSAPP: +91 7012400815</span>
+        <span class="star">★</span>
+        <span>PAN-INDIA EXPRESS DELIVERY</span>
+        <span class="star">★</span>
+        <span>NO GREEN DISCOLORATION</span>
+        <span class="star">★</span>
+        <span>HYPOALLERGENIC</span>
+        <span class="star">★</span>
+      </div>
+      <!-- Marquee clone -->
+      <div class="marquee-item" aria-hidden="true">
+        <span>ACCESSIFY ARCHIVE</span>
+        <span class="star">★</span>
+        <span>100% 316L SURGICAL STAINLESS STEEL</span>
+        <span class="star">★</span>
+        <span>WATERPROOF &bull; TARNISH-FREE</span>
+        <span class="star">★</span>
+        <span>ORDER ON WHATSAPP: +91 7012400815</span>
+        <span class="star">★</span>
+        <span>PAN-INDIA EXPRESS DELIVERY</span>
+        <span class="star">★</span>
+        <span>NO GREEN DISCOLORATION</span>
+        <span class="star">★</span>
+        <span>HYPOALLERGENIC</span>
+        <span class="star">★</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       7. CURATED CATEGORY SHOWCASE
+       ======================================================================= -->
+  <section class="categories-section" id="categories">
+    <div class="container">
+      <div class="categories-header">
+        <div>
+          <div class="section-label" id="categories-section-label">CURATED CATEGORIES</div>
+          <h2 class="section-title" id="categories-section-title">THE ACCESSIFY VAULT</h2>
+        </div>
+      </div>
+
+      <div class="categories-grid" id="categories-vault-grid">
+        <!-- Category: Chrome Hearts -->
+        <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('chrome-hearts')">
+          <img src="/assets/images/category-chrome-hearts.jpg?v=3" alt="Chrome Hearts" class="category-card-img"
+            loading="lazy">
+          <div class="category-card-gradient"></div>
+          <div class="category-card-info">
+            <div class="category-card-count" data-vault-cat="chrome-hearts">42 PIECES</div>
+            <div class="category-card-name">
+              <span>CHROME HEARTS</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </div>
+          </div>
+        </a>
+
+        <!-- Category: Chains & Necklaces -->
+        <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('chains')">
+          <img src="/assets/images/category-chains.jpg?v=3" alt="Chains & Necklaces" class="category-card-img"
+            loading="lazy">
+          <div class="category-card-gradient"></div>
+          <div class="category-card-info">
+            <div class="category-card-count" data-vault-cat="chains">108 PIECES</div>
+            <div class="category-card-name">
+              <span>CHAINS & NECKLACES</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </div>
+          </div>
+        </a>
+
+        <!-- Category: Combo Sets -->
+        <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('combos')">
+          <img src="/assets/images/category-combos.jpg?v=7" alt="Combo Sets" class="category-card-img" loading="lazy">
+          <div class="category-card-gradient"></div>
+          <div class="category-card-info">
+            <div class="category-card-count" data-vault-cat="combos">20 PIECES</div>
+            <div class="category-card-name">
+              <span>COMBO SETS</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </div>
+          </div>
+        </a>
+
+        <!-- Category: Bracelets -->
+        <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('bracelets')">
+          <img src="/assets/images/category-bracelets.jpg?v=4" alt="Bracelets" class="category-card-img" loading="lazy">
+          <div class="category-card-gradient"></div>
+          <div class="category-card-info">
+            <div class="category-card-count" data-vault-cat="bracelets">20 PIECES</div>
+            <div class="category-card-name">
+              <span>BRACELETS</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </div>
+          </div>
+        </a>
+
+        <!-- Category: Rings -->
+        <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('rings')">
+          <img src="/assets/images/category-rings.jpg?v=3" alt="Rings" class="category-card-img" loading="lazy">
+          <div class="category-card-gradient"></div>
+          <div class="category-card-info">
+            <div class="category-card-count" data-vault-cat="rings">30 PIECES</div>
+            <div class="category-card-name">
+              <span>RINGS</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </div>
+          </div>
+        </a>
+
+        <!-- Category: Earrings -->
+        <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('earrings')">
+          <img src="/assets/images/category-earrings.jpg?v=4" alt="Earrings" class="category-card-img" loading="lazy">
+          <div class="category-card-gradient"></div>
+          <div class="category-card-info">
+            <div class="category-card-count" data-vault-cat="earrings">2 PIECES</div>
+            <div class="category-card-name">
+              <span>EARRINGS</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </div>
+          </div>
+        </a>
+
+        <!-- Category: Y2K Gothic Necklaces -->
+        <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('y2k-gothic-necklaces')">
+          <img src="/assets/images/category-y2k-gothic.jpg?v=3" alt="Y2K Gothic Necklaces" class="category-card-img"
+            loading="lazy">
+          <div class="category-card-gradient"></div>
+          <div class="category-card-info">
+            <div class="category-card-count" data-vault-cat="y2k-gothic-necklaces">76 PIECES</div>
+            <div class="category-card-name">
+              <span>Y2K GOTHIC</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </div>
+          </div>
+        </a>
+
+        <!-- Category: Sleek Chains -->
+        <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('sleek-chains')">
+          <img src="/assets/images/sleek-chains.jpg?v=2" alt="Sleek Chains" class="category-card-img" loading="lazy">
+          <div class="category-card-gradient"></div>
+          <div class="category-card-info">
+            <div class="category-card-count" data-vault-cat="sleek-chains">34 PIECES</div>
+            <div class="category-card-name">
+              <span>SLEEK CHAINS</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       8. MAIN CATALOGUE SECTION (200+ PRODUCTS)
+       ======================================================================= -->
+  <section class="catalog-section" id="catalog">
+    <div class="container">
+      <div class="catalog-header">
+        <div class="catalog-header-text">
+          <div class="section-label" id="catalog-section-label">LIVE PRODUCT ARCHIVE</div>
+          <h2 class="section-title" id="catalog-section-title">ALL COLLECTIONS</h2>
+        </div>
+        <button type="button" class="catalog-menu-btn menu-toggle" id="menu-toggle" aria-label="Open Navigation Menu"
+          title="Browse Collections">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Filter Controls & Sort -->
+      <div class="catalog-controls">
+        <div class="filter-pills" id="category-pills">
+          <!-- Rendered dynamically via app.js -->
+        </div>
+
+        <div class="catalog-meta">
+          <span class="catalog-count" id="catalog-count">LOADING PIECES...</span>
+          <select id="sort-select" class="sort-select" aria-label="Sort Catalog">
+            <option value="default">FEATURED DROPS</option>
+            <option value="price_asc">PRICE: LOW TO HIGH</option>
+            <option value="price_desc">PRICE: HIGH TO LOW</option>
+            <option value="newest">NEWEST ARRIVALS</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Product Grid Container (3:4 Ratio, Genrage Card Design) -->
+      <div class="products-grid" id="products-grid">
+        <!-- Rendered dynamically via app.js -->
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       9. EDITORIAL / STATEMENT BANNER
+       ======================================================================= -->
+  <section class="editorial-banner">
+    <div class="editorial-grid">
+      <div class="editorial-img-col">
+        <img src="/assets/images/category-gothic.jpg" alt="ACCESSIFY Craftsmanship" loading="lazy">
+      </div>
+      <div class="editorial-content-col">
+        <div class="section-label">ENGINEERING INTEGRITY</div>
+        <h2 class="section-title" style="font-size: clamp(2rem, 3.5vw, 3rem);">
+          BUILT FOR THE STREETS. FORGED IN SURGICAL STEEL.
+        </h2>
+        <p class="editorial-desc">
+          Conventional fashion jewelry tarnishes within days, turning skins green and losing luster. Every single
+          ACCESSIFY chain, ring, and cuff is forged in solid 316L hypoallergenic surgical stainless steel. Sweat in it,
+          shower in it, swim in it — zero discoloration, zero compromises.
+        </p>
+        <div>
+          <a href="https://wa.me/917012400815" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.966.527 1.93.811 2.796.811 3.181 0 5.767-2.587 5.768-5.766.001-3.181-2.585-5.798-5.768-5.798zm3.385 8.163c-.145.408-.847.781-1.183.829-.336.048-.775.068-2.223-.529-1.854-.764-3.04-2.653-3.132-2.775-.093-.122-.749-.997-.749-1.902 0-.904.472-1.349.64-1.533.168-.184.368-.23.491-.23.123 0 .245.001.353.007.113.005.263-.043.412.316.153.368.522 1.272.568 1.365.046.092.077.2.015.323-.061.123-.092.2-.184.307-.092.107-.194.24-.277.323-.092.092-.189.193-.081.378.107.185.477.787 1.025 1.275.707.63 1.303.825 1.488.917.184.092.292.077.4-.046.108-.123.461-.537.584-.722.123-.184.246-.153.414-.092.169.061 1.074.507 1.258.6.184.092.307.138.353.215.046.077.046.446-.099.854z" />
+            </svg>
+            CHAT WITH US ON WHATSAPP
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       10. AUTHENTIC CUSTOMER REVIEWS
+       ======================================================================= -->
+  <section class="reviews-section">
+    <div class="container">
+      <div style="text-align: center;">
+        <div class="section-label" style="justify-content: center;">VERIFIED BUYER FEEDBACK</div>
+        <h2 class="section-title">THE STREETS HAVE SPOKEN</h2>
+      </div>
+
+      <div class="reviews-grid">
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-text">
+            "The weight on the Gothic Cross chain is unbelievable. Feels super heavy, zero cheap hollow feeling. Been
+            wearing it in gym workouts and showers daily — no tarnish whatsoever."
+          </p>
+          <div class="review-author">
+            <span class="author-name">Rahul K.</span>
+            <span class="author-verified">✓ VERIFIED BUYER</span>
+          </div>
+        </div>
+
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-text">
+            "Direct ordering on WhatsApp was genuinely so smooth. Sent the link, got confirmed in 2 minutes, dispatched
+            next morning to Bangalore. The packaging is pure aesthetic."
+          </p>
+          <div class="review-author">
+            <span class="author-name">Aryan S.</span>
+            <span class="author-verified">✓ VERIFIED BUYER</span>
+          </div>
+        </div>
+
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-text">
+            "Got the combo set with the 4-in-1 layers and star signet ring. People constantly ask me where I copped
+            these. Best street accessories brand in India hands down."
+          </p>
+          <div class="review-author">
+            <span class="author-name">Dev M.</span>
+            <span class="author-verified">✓ VERIFIED BUYER</span>
+          </div>
+        </div>
+
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p class="review-text">
+            "Solid 316L stainless steel is real. No green stains on neck, clasp is rock solid. Definitely picking up the
+            CH97 belt next drop."
+          </p>
+          <div class="review-author">
+            <span class="author-name">Kabir V.</span>
+            <span class="author-verified">✓ VERIFIED BUYER</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       11. FAQ ACCORDION SECTION
+       ======================================================================= -->
+  <section class="faq-section">
+    <div class="container">
+      <div style="text-align: center;">
+        <div class="section-label" style="justify-content: center;">NEED CLARITY?</div>
+        <h2 class="section-title">FREQUENTLY ASKED QUESTIONS</h2>
+      </div>
+
+      <div class="faq-wrapper">
+        <div class="faq-item open">
+          <button type="button" class="faq-question">
+            <span>HOW DOES DIRECT WHATSAPP ORDERING WORK?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-answer">
+            Click 'ORDER ON WHATSAPP' on any product card or detail page. A pre-filled WhatsApp message containing the
+            exact product name, price, and product link will automatically open in your WhatsApp with our verified
+            number +91 7012400815. Our team confirms your delivery address, provides live tracking updates, and personal
+            concierge support.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question">
+            <span>WHAT PAYMENT METHODS DO YOU ACCEPT ON WHATSAPP?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-answer">
+            We accept all UPI applications (Google Pay, PhonePe, Paytm, CRED), Net Banking, and Bank Transfer. Cash on
+            Delivery (COD) is also available for eligible pin codes across India.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question">
+            <span>WHAT ARE YOUR SHIPPING TIMELINES ACROSS INDIA?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-answer">
+            All orders are processed and dispatched within 24 to 48 hours from our fulfillment hub. Metro deliveries
+            take 2 to 4 business days, while tier-2 and tier-3 locations receive delivery within 3 to 5 business days
+            with end-to-end SMS & WhatsApp tracking.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button type="button" class="faq-question">
+            <span>WILL THE JEWELRY RUST OR TURN MY SKIN GREEN?</span>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-answer">
+            Never. We exclusively manufacture using authentic 316L surgical grade stainless steel. It contains 0% cheap
+            nickel, is 100% hypoallergenic, and is completely immune to rust, moisture, sweat, and sea water.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =======================================================================
+       12. FOOTER
+       ======================================================================= -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-top">
+        <div>
+          <div class="footer-brand-title">ACCESSIFY</div>
+          <p class="footer-brand-desc">
+            Heavyweight gothic and Y2K-inspired streetwear jewelry. Forged in 316L surgical stainless steel for those
+            who move different.
+          </p>
+          <div style="display: flex; gap: 0.75rem;">
+            <a href="https://wa.me/917012400815" target="_blank" rel="noopener noreferrer"
+              class="btn btn-whatsapp btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.966.527 1.93.811 2.796.811 3.181 0 5.767-2.587 5.768-5.766.001-3.181-2.585-5.798-5.768-5.798zm3.385 8.163c-.145.408-.847.781-1.183.829-.336.048-.775.068-2.223-.529-1.854-.764-3.04-2.653-3.132-2.775-.093-.122-.749-.997-.749-1.902 0-.904.472-1.349.64-1.533.168-.184.368-.23.491-.23.123 0 .245.001.353.007.113.005.263-.043.412.316.153.368.522 1.272.568 1.365.046.092.077.2.015.323-.061.123-.092.2-.184.307-.092.107-.194.24-.277.323-.092.092-.189.193-.081.378.107.185.477.787 1.025 1.275.707.63 1.303.825 1.488.917.184.092.292.077.4-.046.108-.123.461-.537.584-.722.123-.184.246-.153.414-.092.169.061 1.074.507 1.258.6.184.092.307.138.353.215.046.077.046.446-.099.854z" />
+              </svg>
+              WHATSAPP DESK
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">COLLECTIONS</h4>
+          <div class="footer-links">
+            <a href="#catalog" class="footer-link" onclick="window.setStoreCategory?.('chrome-hearts')">Chrome
+              Hearts</a>
+            <a href="#catalog" class="footer-link" onclick="window.setStoreCategory?.('chains')">Chains & Necklaces</a>
+            <a href="#catalog" class="footer-link" onclick="window.setStoreCategory?.('combos')">Combo Sets</a>
+            <a href="#catalog" class="footer-link" onclick="window.setStoreCategory?.('bracelets')">Bracelets &
+              Cuffs</a>
+            <a href="#catalog" class="footer-link" onclick="window.setStoreCategory?.('rings')">Signet Rings</a>
+            <a href="#catalog" class="footer-link" onclick="window.setStoreCategory?.('earrings')">Earrings</a>
+            <a href="#catalog" class="footer-link" onclick="window.setStoreCategory?.('y2k-gothic-necklaces')">Y2K
+              Gothic Necklaces</a>
+            <a href="#catalog" class="footer-link" onclick="window.setStoreCategory?.('sleek-chains')">Sleek Chains</a>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">STORE INFO</h4>
+          <div class="footer-links">
+            <a href="https://wa.me/917012400815" class="footer-link">WhatsApp: +91 7012400815</a>
+            <a href="#catalog" class="footer-link">Pan-India Express Delivery</a>
+            <a href="#catalog" class="footer-link">Care Guide & 316L Specs</a>
+            <a href="/admin" class="footer-link" style="color: #666; font-size: 0.75rem;">Staff Admin Portal</a>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">DIRECT ENQUIRY</h4>
+          <p style="font-size: 0.8125rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.6;">
+            Have a custom combo request or sizing inquiry? Tap to message directly on our official WhatsApp desk.
+          </p>
+          <a href="https://wa.me/917012400815" class="btn btn-outline btn-sm btn-full">
+            +91 7012400815
+          </a>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>&copy; 2026 ACCESSIFY. ALL RIGHTS RESERVED. FORGED FOR THOSE WHO MOVE DIFFERENT.</div>
+        <div style="display: flex; gap: 1.5rem;">
+          <a href="/admin" style="color: #444;">Admin System</a>
+          <span>Pan-India Shipping</span>
+          <span>100% Surgical Steel</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =======================================================================
+       13. PRODUCT DETAIL MODAL (PDP OVERLAY)
+       ======================================================================= -->
+  <div class="pdp-modal" id="pdp-modal" aria-hidden="true">
+    <div class="pdp-container">
+      <button type="button" class="pdp-close-btn" id="pdp-close-btn" aria-label="Close Product View">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+
+      <div class="pdp-content-grid">
+        <!-- PDP Image Gallery -->
+        <div class="pdp-gallery">
+          <div class="pdp-main-img-box">
+            <img src="" alt="" id="pdp-main-img">
+          </div>
+          <div class="pdp-thumbs" id="pdp-thumbs"></div>
+        </div>
+
+        <!-- PDP Info Column -->
+        <div class="pdp-info">
+          <div class="pdp-category" id="pdp-category"></div>
+          <h1 class="pdp-title" id="pdp-title"></h1>
+
+          <!-- Price Box -->
+          <div class="pdp-pricing-box">
+            <span class="pdp-price" id="pdp-price"></span>
+            <span class="pdp-mrp" id="pdp-mrp"></span>
+            <span class="pdp-discount-pill" id="pdp-discount"></span>
+          </div>
+
+          <!-- Stock Status -->
+          <div class="pdp-stock-status" id="pdp-stock"></div>
+
+          <!-- Description -->
+          <p class="pdp-desc" id="pdp-desc"></p>
+
+          <!-- Variants -->
+          <div class="pdp-variants-box" id="pdp-variants-box">
+            <div class="pdp-variants-title">SELECT OPTION / SIZE</div>
+            <div class="pdp-variants-list" id="pdp-variants-list"></div>
+          </div>
+
+          <!-- Core WhatsApp Order Button -->
+          <div class="pdp-order-action">
+            <button type="button" class="btn btn-whatsapp btn-full" id="pdp-whatsapp-btn"
+              style="min-height: 56px; font-size: 0.9375rem;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.966.527 1.93.811 2.796.811 3.181 0 5.767-2.587 5.768-5.766.001-3.181-2.585-5.798-5.768-5.798zm3.385 8.163c-.145.408-.847.781-1.183.829-.336.048-.775.068-2.223-.529-1.854-.764-3.04-2.653-3.132-2.775-.093-.122-.749-.997-.749-1.902 0-.904.472-1.349.64-1.533.168-.184.368-.23.491-.23.123 0 .245.001.353.007.113.005.263-.043.412.316.153.368.522 1.272.568 1.365.046.092.077.2.015.323-.061.123-.092.2-.184.307-.092.107-.194.24-.277.323-.092.092-.189.193-.081.378.107.185.477.787 1.025 1.275.707.63 1.303.825 1.488.917.184.092.292.077.4-.046.108-.123.461-.537.584-.722.123-.184.246-.153.414-.092.169.061 1.074.507 1.258.6.184.092.307.138.353.215.046.077.046.446-.099.854z" />
+              </svg>
+              ORDER ON WHATSAPP
+            </button>
+          </div>
+
+          <!-- Feature Highlights Box -->
+          <div class="pdp-highlights">
+            <div class="highlight-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>316L SURGICAL STEEL</span>
+            </div>
+            <div class="highlight-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>TARNISH & WATER PROOF</span>
+            </div>
+            <div class="highlight-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>PAN-INDIA DISPATCH</span>
+            </div>
+            <div class="highlight-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>NO GREEN DISCOLORATION</span>
+            </div>
+          </div>
+
+          <!-- Share Link Action -->
+          <div class="pdp-share-action">
+            <button type="button" class="btn btn-outline btn-sm btn-full" id="pdp-share-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+              </svg>
+              SHARE PRODUCT LINK
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Related Products in same category -->
+      <div style="padding: 2.5rem; border-top: 1px solid var(--border-subtle);">
+        <div class="section-label">COMPLETE THE FIT</div>
+        <h3 class="section-title" style="font-size: 1.5rem; margin-bottom: 1.5rem;">YOU MAY ALSO LIKE</h3>
+        <div class="products-grid" id="pdp-related-grid"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       14. STICKY BOTTOM ORDER BAR (MOBILE VIEW ONLY)
+       ======================================================================= -->
+  <div class="sticky-mobile-order-bar" id="sticky-mobile-order-bar">
+    <div class="sticky-product-meta">
+      <div class="sticky-title" id="sticky-title">ACCESSIFY PIECE</div>
+      <div class="sticky-price" id="sticky-price">₹0</div>
+    </div>
+    <button type="button" class="btn btn-whatsapp btn-sm" id="sticky-whatsapp-btn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.966.527 1.93.811 2.796.811 3.181 0 5.767-2.587 5.768-5.766.001-3.181-2.585-5.798-5.768-5.798zm3.385 8.163c-.145.408-.847.781-1.183.829-.336.048-.775.068-2.223-.529-1.854-.764-3.04-2.653-3.132-2.775-.093-.122-.749-.997-.749-1.902 0-.904.472-1.349.64-1.533.168-.184.368-.23.491-.23.123 0 .245.001.353.007.113.005.263-.043.412.316.153.368.522 1.272.568 1.365.046.092.077.2.015.323-.061.123-.092.2-.184.307-.092.107-.194.24-.277.323-.092.092-.189.193-.081.378.107.185.477.787 1.025 1.275.707.63 1.303.825 1.488.917.184.092.292.077.4-.046.108-.123.461-.537.584-.722.123-.184.246-.153.414-.092.169.061 1.074.507 1.258.6.184.092.307.138.353.215.046.077.046.446-.099.854z" />
+      </svg>
+      ORDER ON WHATSAPP
+    </button>
+  </div>
+
+  <!-- =======================================================================
+       15. TOAST NOTIFICATION CONTAINER
+       ======================================================================= -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Storefront Engine Script -->
+  <script src="/js/app.js"></script>
+
+  <!-- Global Header Category Helper -->
+  <script>
+    window.setStoreCategory = function (cat) {
+      const pill = document.querySelecer -}"]`);
+    if (pill) {
+      pill.click();
+    }
+    const target = document.getElementById('catalog');
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  </script>
+</body>
+
+</html>

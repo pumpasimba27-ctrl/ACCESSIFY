@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ACCESSIFY | Admin Central Control</title>
+  
+  <link rel="icon" href="/assets/images/accessify-logo.png" type="image/png">
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+
+  <!-- =======================================================================
+       1. SECURE LOGIN SCREEN (SHOWN WHEN UNAUTHENTICATED)
+       ======================================================================= -->
+  <div class="admin-login-wrapper" id="login-wrapper">
+    <div class="login-card">
+      <div class="login-brand">
+        <h1>ACCESSIFY ADMIN</h1>
+        <p>CENTRAL DATABASE CONTROL DESK</p>
+      </div>
+
+      <div class="admin-alert admin-alert-error" id="login-alert"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="login-user">ADMINISTRATOR USERNAME</label>
+          <input type="text" id="login-user" class="form-input" placeholder="Enter username" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="login-pass">SECURE ACCESS KEY / PASSWORD</label>
+          <input type="password" id="login-pass" class="form-input" placeholder="••••••••••••" required autocomplete="current-password">
+        </div>
+
+        <div style="margin-top: 2rem;">
+          <button type="submit" class="admin-btn admin-btn-primary" style="width: 100%; min-height: 48px;">
+            AUTHENTICATE & ENTER
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       2. MAIN ADMIN APPLICATION (SHOWN WHEN AUTHENTICATED)
+       ======================================================================= -->
+  <div id="admin-app" style="display: none;">
+    <!-- Admin Top Header -->
+    <header class="admin-header">
+      <div class="admin-header-inner">
+        <div class="admin-logo-area">
+          <span class="admin-brand-name">ACCESSIFY <span style="color: var(--admin-text-subtle); font-size: 0.8125rem;">ADMIN</span></span>
+          <span class="admin-badge-sync" id="db-version-badge">
+            <span class="sync-dot"></span>
+            <span>CENTRAL DB CONNECTED</span>
+          </span>
+        </div>
+
+        <div class="admin-header-nav">
+          <span style="font-size: 0.75rem; color: var(--admin-text-muted); font-weight: 600;">
+            USER: <span id="admin-user-display" style="color: #fff;">admin</span>
+          </span>
+          <a href="/" target="_blank" rel="noopener noreferrer" class="admin-btn admin-btn-secondary admin-btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/>
+              <line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+            LIVE STOREFRONT
+          </a>
+          <button type="button" class="admin-btn admin-btn-secondary admin-btn-sm" id="logout-btn">
+            LOG OUT
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="admin-main">
+      <!-- Stat Metric Cards -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">TOTAL PRODUCTS</div>
+          <div class="stat-val" id="stat-total">0</div>
+          <div class="stat-sub">Central database records</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">ACCESSORIES</div>
+          <div class="stat-val" style="color: #60a5fa;" id="stat-accessories">0</div>
+          <div class="stat-sub">Active accessories catalog</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">CLOTHING</div>
+          <div class="stat-val" style="color: #c084fc;" id="stat-clothing">0</div>
+          <div class="stat-sub">Active clothing catalog</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">IN STOCK / ACTIVE</div>
+          <div class="stat-val" style="color: #4ade80;" id="stat-available">0</div>
+          <div class="stat-sub">Live on customer storefront</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">CATEGORIES</div>
+          <div class="stat-val" id="stat-categories">0</div>
+          <div class="stat-sub">Across both departments</div>
+        </div>
+      </section>
+
+      <!-- Action & Filter Toolbar -->
+      <section class="admin-toolbar">
+        <div class="toolbar-search">
+          <input type="text" id="admin-search" class="form-input" placeholder="Search catalog by product name, SKU or tag...">
+        </div>
+
+        <div class="toolbar-filters">
+          <select id="admin-section-filter" class="form-select" style="min-width: 170px; font-weight: 700;">
+            <option value="all">ALL DEPARTMENTS</option>
+            <option value="accessories">ACCESSORIES ONLY</option>
+            <option value="clothing">CLOTHING ONLY</option>
+          </select>
+
+          <select id="admin-cat-filter" class="form-select" style="min-width: 170px;">
+            <option value="all">ALL CATEGORIES</option>
+          </select>
+
+          <select id="admin-status-filter" class="form-select" style="min-width: 150px;">
+            <option value="all">ALL STATUSES</option>
+            <option value="available">IN STOCK ONLY</option>
+            <option value="sold_out">SOLD OUT ONLY</option>
+            <option value="hidden">HIDDEN ONLY</option>
+          </select>
+
+          <button type="button" class="admin-btn admin-btn-primary" id="add-product-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            ADD PRODUCT
+          </button>
+
+          <button type="button" class="admin-btn admin-btn-secondary" id="manage-cats-btn">
+            CATEGORIES
+          </button>
+        </div>
+      </section>
+
+      <!-- Products Management Table -->
+      <section class="table-container">
+        <div id="table-loading" style="padding: 3rem; text-align: center; color: var(--admin-text-subtle);">
+          Synchronizing catalog with database...
+        </div>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th style="width: 70px;">IMAGE</th>
+              <th>PRODUCT DETAILS</th>
+              <th>SECTION</th>
+              <th>CATEGORY</th>
+              <th>PRICE & MRP</th>
+              <th>STOCK</th>
+              <th>STATUS</th>
+              <th style="text-align: right;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody id="products-table-body">
+            <!-- Dynamically populated via admin.js -->
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Recent Audit Logs Section -->
+      <section style="margin-top: 3rem;">
+        <div class="modal-header" style="border: none; margin-bottom: 0.75rem;">
+          <h3 class="modal-title" style="font-size: 0.875rem;">CENTRAL DATABASE AUDIT LOGS</h3>
+        </div>
+        <div class="audit-list" id="audit-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- =======================================================================
+       3. ADD / EDIT PRODUCT MODAL
+       ======================================================================= -->
+  <div class="admin-modal" id="product-modal">
+    <div class="admin-modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title" id="product-modal-title">ADD NEW PRODUCT</h2>
+        <button type="button" class="admin-btn admin-btn-secondary admin-btn-sm" id="modal-cancel-btn">
+          CLOSE
+        </button>
+      </div>
+
+      <div class="admin-alert admin-alert-error" id="modal-alert"></div>
+
+      <form id="product-form">
+        <!-- SELECT PRODUCT SECTION (CRITICAL REQUIREMENT) -->
+        <div class="form-group" style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.18); padding: 0.875rem 1rem; border-radius: 6px; margin-bottom: 1.25rem;">
+          <label class="form-label" for="prod-section" style="color: #ffffff; font-weight: 700; letter-spacing: 0.08em; display: flex; align-items: center; justify-content: space-between;">
+            <span>SELECT PRODUCT SECTION *</span>
+            <span style="font-size: 0.6875rem; color: #a1a1aa; font-weight: 500; text-transform: none;">Choose department</span>
+          </label>
+          <select id="prod-section" class="form-select" required style="font-weight: 700; font-size: 0.9375rem; letter-spacing: 0.05em; background-color: #141414; border-color: rgba(255, 255, 255, 0.3);">
+            <option value="accessories">1. ACCESSORIES</option>
+            <option value="clothing">2. CLOTHING</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prod-name">PRODUCT NAME *</label>
+          <input type="text" id="prod-name" class="form-input" required placeholder="e.g. GOTHIC CROSS STAINLESS STEEL CHAIN">
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="prod-category">CATEGORY *</label>
+            <select id="prod-category" class="form-select" required></select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="prod-status">AVAILABILITY STATUS</label>
+            <select id="prod-status" class="form-select">
+              <option value="available">AVAILABLE (IN STOCK)</option>
+              <option value="sold_out">SOLD OUT</option>
+              <option value="hidden">HIDDEN (DRAFT)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="prod-price">SELLING PRICE (₹) *</label>
+            <input type="number" id="prod-price" class="form-input" required step="1" placeholder="e.g. 299">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="prod-compare-price">MRP / COMPARE PRICE (₹)</label>
+            <input type="number" id="prod-compare-price" class="form-input" step="1" placeholder="e.g. 699">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="prod-stock">STOCK QUANTITY</label>
+            <input type="number" id="prod-stock" class="form-input" value="25" min="0">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="prod-variants">OPTIONS / SIZES (COMMA SEPARATED)</label>
+            <input type="text" id="prod-variants" class="form-input" placeholder="e.g. US 8, US 9, US 10 or Onyx, Chrome">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prod-images">PRODUCT PHOTOGRAPHS (URLS PER LINE)</label>
+          <textarea id="prod-images" class="form-textarea" rows="3" placeholder="https://cdn.zepio.io/...webp (one per line)"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prod-upload">OR UPLOAD LOCAL PHOTOGRAPHS</label>
+          <input type="file" id="prod-upload" class="form-input" multiple accept="image/*">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prod-desc">PRODUCT DESCRIPTION</label>
+          <textarea id="prod-desc" class="form-textarea" rows="3" placeholder="Heavyweight 316L surgical stainless steel construction with gothic cross details..."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 2rem; margin-bottom: 1.5rem;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; cursor: pointer;">
+            <input type="checkbox" id="prod-featured" style="width: 16px; height: 16px;">
+            <span>FEATURED ON HOMEPAGE</span>
+          </label>
+
+          <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; cursor: pointer;">
+            <input type="checkbox" id="prod-new-arrival" style="width: 16px; height: 16px;" checked>
+            <span>NEW ARRIVAL BADGE</span>
+          </label>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; border-top: 1px solid var(--admin-border); padding-top: 1.25rem;">
+          <button type="submit" class="admin-btn admin-btn-primary" style="min-height: 44px; padding: 0 1.75rem;">
+            SAVE TO CENTRAL DATABASE
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       4. DELETE CONFIRMATION MODAL
+       ======================================================================= -->
+  <div class="admin-modal" id="delete-modal">
+    <div class="admin-modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h2 class="modal-title" style="color: #ef4444;">PERMANENT REMOVAL</h2>
+      </div>
+      <p style="font-size: 0.9375rem; color: #d4d4d8; line-height: 1.6; margin-bottom: 1.5rem;">
+        Are you sure you want to permanently delete <strong id="delete-prod-name" style="color: #fff;"></strong>?
+      </p>
+      <p style="font-size: 0.8125rem; color: #a1a1aa; line-height: 1.6; margin-bottom: 2rem;">
+        This piece will be instantly removed from the central database and disappear from all customer browsers in real time.
+      </p>
+      <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+        <button type="button" class="admin-btn admin-btn-secondary" id="cancel-delete-btn">CANCEL</button>
+        <button type="button" class="admin-btn admin-btn-danger" id="confirm-delete-btn">PERMANENTLY DELETE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       5. CATEGORIES MANAGER MODAL
+       ======================================================================= -->
+  <div class="admin-modal" id="cat-modal">
+    <div class="admin-modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2 class="modal-title">MANAGE CATEGORIES</h2>
+        <button type="button" class="admin-btn admin-btn-secondary admin-btn-sm" id="cat-close-btn">CLOSE</button>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <label class="form-label">EXISTING ACCESSIFY CATEGORIES</label>
+        <div id="cat-list"></div>
+      </div>
+
+      <div style="border-top: 1px solid var(--admin-border); padding-top: 1.25rem;">
+        <label class="form-label" for="cat-name-input">ADD NEW CATEGORY</label>
+        <div style="display: flex; gap: 0.75rem; margin-bottom: 0.5rem;">
+          <input type="text" id="cat-name-input" class="form-input" placeholder="e.g. Hoodies, Oversized Tees, Leather">
+          <select id="cat-section-input" class="form-select" style="max-width: 150px; font-weight: 600;">
+            <option value="accessories">ACCESSORIES</option>
+            <option value="clothing">CLOTHING</option>
+          </select>
+          <button type="button" class="admin-btn admin-btn-primary" id="add-cat-btn">ADD</button>
+        </div>
+        <span style="font-size: 0.6875rem; color: #a1a1aa;">Choose department so categories are cleanly separated.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Application Script -->
+  <script src="/js/admin.js"></script>
+</body>
+</html>
+
