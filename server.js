@@ -32,14 +32,25 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const WHATSAPP_NUMBER = '917012400815';
 
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
 // Directories
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = path.join(__dirname, 'data');
+const TMP_UPLOADS = path.join('/tmp', 'uploads');
 
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR, { recursive: true });
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+if (isVercel) {
+  try {
+    if (!fs.existsSync(TMP_UPLOADS)) fs.mkdirSync(TMP_UPLOADS, { recursive: true });
+  } catch (_) {}
+} else {
+  try {
+    if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR, { recursive: true });
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  } catch (_) {}
+}
 
 // Active Admin Session Tokens Store
 const activeSessions = new Map(); // token -> { username, loginAt }
@@ -62,7 +73,7 @@ function broadcastEvent(type, payload = {}) {
 // Multer storage setup for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, UPLOADS_DIR);
+    cb(null, isVercel ? TMP_UPLOADS : UPLOADS_DIR);
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -92,8 +103,13 @@ app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 // Static Assets
+if (isVercel) {
+  app.use('/uploads', express.static(TMP_UPLOADS));
+}
 app.use('/uploads', express.static(UPLOADS_DIR));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use(express.static(PUBLIC_DIR));
+app.use(express.static(path.join(process.cwd(), 'public')));
 
 // CRITICAL CACHE CONTROL: Disable all API caching across mobile browsers, Instagram webview & Safari
 app.use('/api', (req, res, next) => {
@@ -570,13 +586,17 @@ app.use((req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`\n======================================================`);
-  console.log(`⚡ ACCESSIFY SERVER RUNNING ON: http://localhost:${PORT}`);
-  console.log(`🛒 Storefront:  http://localhost:${PORT}`);
-  console.log(`🔒 Admin Panel: http://localhost:${PORT}/admin`);
-  console.log(`💬 WhatsApp:   https://wa.me/${WHATSAPP_NUMBER}`);
-  console.log(`📊 DB Version:  ${getDbVersion()}`);
-  console.log(`======================================================\n`);
-});
+// Start Server (only when running directly, not inside Vercel Serverless Function)
+if (!isVercel) {
+  app.listen(PORT, () => {
+    console.log(`\n======================================================`);
+    console.log(`⚡ ACCESSIFY SERVER RUNNING ON: http://localhost:${PORT}`);
+    console.log(`🛒 Storefront:  http://localhost:${PORT}`);
+    console.log(`🔒 Admin Panel: http://localhost:${PORT}/admin`);
+    console.log(`💬 WhatsApp:   https://wa.me/${WHATSAPP_NUMBER}`);
+    console.log(`📊 DB Version:  ${getDbVersion()}`);
+    console.log(`======================================================\n`);
+  });
+}
+
+export default app;

@@ -7,17 +7,67 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DATA_DIR = path.join(__dirname, 'data');
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+// Candidate source paths for data directory
+const candidateDataDirs = [
+  path.join(process.cwd(), 'data'),
+  path.join(__dirname, 'data')
+];
+
+let sourceDataDir = candidateDataDirs.find(d => fs.existsSync(d)) || path.join(__dirname, 'data');
+let DATA_DIR = sourceDataDir;
+let DB_PATH = path.join(sourceDataDir, 'accessify.db');
+
+if (isVercel) {
+  const TMP_DATA_DIR = path.join('/tmp', 'data');
+  try {
+    if (!fs.existsSync(TMP_DATA_DIR)) {
+      fs.mkdirSync(TMP_DATA_DIR, { recursive: true });
+    }
+  } catch (_) {}
+
+  const tmpDbPath = path.join(TMP_DATA_DIR, 'accessify.db');
+
+  let sourceDb = null;
+  for (const dir of candidateDataDirs) {
+    const candidate = path.join(dir, 'accessify.db');
+    if (fs.existsSync(candidate)) {
+      sourceDb = candidate;
+      break;
+    }
+  }
+
+  if (!fs.existsSync(tmpDbPath) && sourceDb) {
+    try {
+      fs.copyFileSync(sourceDb, tmpDbPath);
+      console.log(`[DB] Copied source database (${fs.statSync(sourceDb).size} bytes) from ${sourceDb} to /tmp`);
+    } catch (err) {
+      console.error('[DB] Failed copying DB to /tmp:', err);
+    }
+  }
+
+  if (fs.existsSync(tmpDbPath)) {
+    DB_PATH = tmpDbPath;
+    DATA_DIR = TMP_DATA_DIR;
+  }
+} else {
+  if (!fs.existsSync(DATA_DIR)) {
+    try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (_) {}
+  }
 }
 
-const DB_PATH = path.join(DATA_DIR, 'accessify.db');
 const db = new Database(DB_PATH);
 
-// Enable WAL mode for high concurrency & lightning fast reads
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+// Pragmas with safe fallbacks
+try {
+  db.pragma('journal_mode = WAL');
+} catch (e) {
+  try { db.pragma('journal_mode = DELETE'); } catch (_) {}
+}
+try {
+  db.pragma('foreign_keys = ON');
+} catch (_) {}
 
 // Initialize schema
 db.exec(`
@@ -267,14 +317,31 @@ function seedProducts() {
     return;
   }
 
-  const jsonPath = path.join(DATA_DIR, 'initial_products.json');
-  if (!fs.existsSync(jsonPath)) {
-    console.warn(`[DB] initial_products.json not found, skipping product seed.`);
+  let jsonPath = null;
+  const jsonCandidates = [
+    path.join(DATA_DIR, 'initial_products.json'),
+    path.join(DATA_DIR, 'database_backup.json'),
+    path.join(process.cwd(), 'data', 'initial_products.json'),
+    path.join(process.cwd(), 'data', 'database_backup.json'),
+    path.join(__dirname, 'data', 'initial_products.json'),
+    path.join(__dirname, 'data', 'database_backup.json')
+  ];
+
+  for (const cand of jsonCandidates) {
+    if (fs.existsSync(cand)) {
+      jsonPath = cand;
+      break;
+    }
+  }
+
+  if (!jsonPath) {
+    console.warn(`[DB] No seed JSON file found, skipping product seed.`);
     return;
   }
 
-  const products = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-  console.log(`[DB] Seeding ${products.length} authentic products into SQLite...`);
+  const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+  const products = Array.isArray(raw) ? raw : (raw.products || []);
+  console.log(`[DB] Seeding ${products.length} authentic products into SQLite from ${jsonPath}...`);
 
   const insertProduct = db.prepare(`
     INSERT INTO products (
