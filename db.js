@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -9,133 +10,202 @@ const __dirname = path.dirname(__filename);
 
 const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 
-// Candidate source paths for data directory
-const candidateDataDirs = [
-  path.join(process.cwd(), 'data'),
-  path.join(__dirname, 'data')
-];
+// Detect Turso / libSQL cloud database environment variables (Vercel Marketplace or explicit config)
+function resolveTursoConfig() {
+  const urlCandidates = [
+    process.env.TURSO_DATABASE_URL,
+    process.env.STORAGE_TURSO_DATABASE_URL,
+    process.env.LIBSQL_URL,
+    process.env.DATABASE_URL
+  ];
+  const url = urlCandidates.find(v => typeof v === 'string' && /^(libsql|https?):\/\//i.test(v.trim()));
+  if (!url) return null;
 
-let sourceDataDir = candidateDataDirs.find(d => fs.existsSync(d)) || path.join(__dirname, 'data');
-let DATA_DIR = sourceDataDir;
-let DB_PATH = path.join(sourceDataDir, 'accessify.db');
-
-if (isVercel) {
-  const TMP_DATA_DIR = path.join('/tmp', 'data');
-  try {
-    if (!fs.existsSync(TMP_DATA_DIR)) {
-      fs.mkdirSync(TMP_DATA_DIR, { recursive: true });
-    }
-  } catch (_) {}
-
-  const tmpDbPath = path.join(TMP_DATA_DIR, 'accessify.db');
-
-  let sourceDb = null;
-  for (const dir of candidateDataDirs) {
-    const candidate = path.join(dir, 'accessify.db');
-    if (fs.existsSync(candidate)) {
-      sourceDb = candidate;
-      break;
-    }
+  // Locally, only use Turso if explicitly configured via TURSO_DATABASE_URL / USE_TURSO
+  if (!isVercel && !process.env.TURSO_DATABASE_URL && !process.env.STORAGE_TURSO_DATABASE_URL && process.env.USE_TURSO !== 'true') {
+    return null;
   }
 
-  if (!fs.existsSync(tmpDbPath) && sourceDb) {
+  const token = (
+    process.env.TURSO_AUTH_TOKEN ||
+    process.env.STORAGE_TURSO_AUTH_TOKEN ||
+    process.env.LIBSQL_AUTH_TOKEN ||
+    ''
+  ).trim();
+
+  return { url: url.trim(), authToken: token || undefined };
+}
+
+// -------------------------------------------------------------
+// Database Driver Adapter (Unified Local SQLite + Cloud Turso)
+// -------------------------------------------------------------
+const tursoConfig = resolveTursoConfig();
+let dbMode = tursoConfig ? 'turso' : 'local-sqlite';
+let localDb = null;
+let tursoClient = null;
+let localDataDir = path.join(__dirname, 'data');
+
+function initAdapter() {
+  if (tursoConfig) {
+    tursoClient = createClient({
+      url: tursoConfig.url,
+      authToken: tursoConfig.authToken
+    });
+    return;
+  }
+
+  // Local SQLite setup (with read-only /tmp fallback only if running on Vercel without Turso)
+  const candidateDataDirs = [
+    path.join(process.cwd(), 'data'),
+    path.join(__dirname, 'data')
+  ];
+  let sourceDataDir = candidateDataDirs.find(d => fs.existsSync(d)) || path.join(__dirname, 'data');
+  let dbPath = path.join(sourceDataDir, 'accessify.db');
+
+  if (isVercel) {
+    dbMode = 'vercel-ephemeral-fallback';
+    const tmpDataDir = path.join('/tmp', 'data');
     try {
-      fs.copyFileSync(sourceDb, tmpDbPath);
-      console.log(`[DB] Copied source database (${fs.statSync(sourceDb).size} bytes) from ${sourceDb} to /tmp`);
-    } catch (err) {
-      console.error('[DB] Failed copying DB to /tmp:', err);
+      if (!fs.existsSync(tmpDataDir)) fs.mkdirSync(tmpDataDir, { recursive: true });
+    } catch (_) {}
+    const tmpDbPath = path.join(tmpDataDir, 'accessify.db');
+    let sourceDb = null;
+    for (const dir of candidateDataDirs) {
+      const candidate = path.join(dir, 'accessify.db');
+      if (fs.existsSync(candidate)) {
+        sourceDb = candidate;
+        break;
+      }
     }
+    if (!fs.existsSync(tmpDbPath) && sourceDb) {
+      try {
+        fs.copyFileSync(sourceDb, tmpDbPath);
+        console.log(`[DB] Copied source database (${fs.statSync(sourceDb).size} bytes) to /tmp`);
+      } catch (err) {
+        console.error('[DB] Failed copying DB to /tmp:', err);
+      }
+    }
+    if (fs.existsSync(tmpDbPath)) {
+      dbPath = tmpDbPath;
+      localDataDir = tmpDataDir;
+    }
+  } else {
+    localDataDir = sourceDataDir;
+    try {
+      if (!fs.existsSync(localDataDir)) fs.mkdirSync(localDataDir, { recursive: true });
+    } catch (_) {}
   }
 
-  if (fs.existsSync(tmpDbPath)) {
-    DB_PATH = tmpDbPath;
-    DATA_DIR = TMP_DATA_DIR;
+  localDb = new Database(dbPath);
+  try {
+    localDb.pragma('journal_mode = WAL');
+  } catch (_) {
+    try { localDb.pragma('journal_mode = DELETE'); } catch (__) {}
   }
-} else {
-  if (!fs.existsSync(DATA_DIR)) {
-    try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (_) {}
+  try {
+    localDb.pragma('foreign_keys = ON');
+  } catch (_) {}
+}
+
+initAdapter();
+
+async function queryAll(sql, params = []) {
+  if (tursoClient) {
+    const res = await tursoClient.execute({ sql, args: params });
+    return res.rows.map(row => ({ ...row }));
+  }
+  return localDb.prepare(sql).all(...params);
+}
+
+async function queryOne(sql, params = []) {
+  if (tursoClient) {
+    const res = await tursoClient.execute({ sql, args: params });
+    return res.rows[0] ? { ...res.rows[0] } : undefined;
+  }
+  return localDb.prepare(sql).get(...params);
+}
+
+async function execute(sql, params = []) {
+  if (tursoClient) {
+    const res = await tursoClient.execute({ sql, args: params });
+    return { changes: Number(res.rowsAffected || 0) };
+  }
+  const info = localDb.prepare(sql).run(...params);
+  return { changes: Number(info.changes || 0) };
+}
+
+async function execStatements(statements) {
+  if (tursoClient) {
+    await tursoClient.batch(
+      statements.map(s => (typeof s === 'string' ? { sql: s, args: [] } : { sql: s.sql, args: s.args || [] })),
+      'write'
+    );
+    return;
+  }
+  const tx = localDb.transaction((list) => {
+    for (const s of list) {
+      if (typeof s === 'string') {
+        localDb.exec(s);
+      } else {
+        localDb.prepare(s.sql).run(...(s.args || []));
+      }
+    }
+  });
+  tx(statements);
+}
+
+// -------------------------------------------------------------
+// Helpers & Normalizers
+// -------------------------------------------------------------
+function parseJsonArray(val) {
+  if (Array.isArray(val)) return val;
+  if (!val || typeof val !== 'string') return [];
+  try {
+    const parsed = JSON.parse(val);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
   }
 }
 
-const db = new Database(DB_PATH);
-
-// Pragmas with safe fallbacks
-try {
-  db.pragma('journal_mode = WAL');
-} catch (e) {
-  try { db.pragma('journal_mode = DELETE'); } catch (_) {}
+function slugify(text) {
+  return String(text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '') || `item-${Date.now().toString().slice(-5)}`;
 }
-try {
-  db.pragma('foreign_keys = ON');
-} catch (_) {}
 
-// Initialize schema
-db.exec(`
-  CREATE TABLE IF NOT EXISTS products (
-    id TEXT PRIMARY KEY,
-    original_id INTEGER,
-    name TEXT NOT NULL,
-    slug TEXT UNIQUE,
-    section TEXT DEFAULT 'accessories', -- 'accessories' or 'clothing'
-    category TEXT NOT NULL,
-    price REAL NOT NULL,
-    comparePrice REAL,
-    description TEXT,
-    images TEXT, -- JSON array
-    variants TEXT, -- JSON array
-    stock INTEGER DEFAULT 25,
-    rating REAL DEFAULT 4.8,
-    numReviews INTEGER DEFAULT 12,
-    featured INTEGER DEFAULT 0,
-    newArrival INTEGER DEFAULT 0,
-    status TEXT DEFAULT 'available', -- 'available', 'sold_out', 'hidden'
-    sku_code TEXT,
-    branch_id INTEGER DEFAULT 2,
-    tags TEXT, -- JSON array
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
-  );
+/**
+ * Normalizes legacy statuses ('active' -> 'available', 'inactive' -> 'hidden')
+ * while keeping canonical 'available', 'sold_out', and 'hidden' values intact.
+ */
+function normalizeProductStatus(rawStatus) {
+  const s = String(rawStatus || 'available').toLowerCase().trim();
+  if (s === 'active') return 'available';
+  if (s === 'inactive') return 'hidden';
+  if (s === 'available' || s === 'sold_out' || s === 'hidden') return s;
+  return 'available';
+}
 
-  CREATE TABLE IF NOT EXISTS categories (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    slug TEXT UNIQUE NOT NULL,
-    section TEXT DEFAULT 'accessories', -- 'accessories' or 'clothing'
-    display_order INTEGER DEFAULT 0,
-    description TEXT,
-    image TEXT
-  );
+function formatProductRow(r) {
+  return {
+    ...r,
+    section: r.section || 'accessories',
+    status: normalizeProductStatus(r.status),
+    images: parseJsonArray(r.images),
+    variants: parseJsonArray(r.variants),
+    tags: parseJsonArray(r.tags),
+    price: Number(r.price) || 0,
+    comparePrice: r.comparePrice !== null && r.comparePrice !== undefined ? Number(r.comparePrice) : null,
+    stock: r.stock !== null && r.stock !== undefined ? Number(r.stock) : 25,
+    rating: r.rating !== null && r.rating !== undefined ? Number(r.rating) : 4.8,
+    numReviews: r.numReviews !== null && r.numReviews !== undefined ? Number(r.numReviews) : 12,
+    featured: Boolean(r.featured),
+    newArrival: Boolean(r.newArrival)
+  };
+}
 
-  CREATE TABLE IF NOT EXISTS admin_users (
-    id TEXT PRIMARY KEY,
-    username TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    salt TEXT NOT NULL,
-    created_at TEXT DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS audit_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    action TEXT NOT NULL,
-    details TEXT,
-    timestamp TEXT DEFAULT (datetime('now'))
-  );
-`);
-
-// Safe runtime migration ensures section column exists and defaults to accessories
-try { db.exec("ALTER TABLE products ADD COLUMN section TEXT DEFAULT 'accessories'"); } catch (_) { }
-try { db.exec("ALTER TABLE categories ADD COLUMN section TEXT DEFAULT 'accessories'"); } catch (_) { }
-try {
-  db.exec("UPDATE products SET section = 'accessories' WHERE section IS NULL OR section = ''");
-  db.exec("UPDATE categories SET section = 'accessories' WHERE section IS NULL OR section = ''");
-} catch (_) { }
-
-// Password hashing helper
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
   return { hash, salt };
@@ -143,32 +213,16 @@ function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
 
 function verifyPassword(password, hash, salt) {
   const testHash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
-  return testHash === hash;
-}
-
-// Version management
-let currentVersion = Date.now();
-
-function bumpVersion() {
-  currentVersion = Date.now();
-  const stmt = db.prepare(`INSERT INTO settings (key, value) VALUES ('db_version', ?) ON CONFLICT(key) DO UPDATE SET value = ?`);
-  stmt.run(String(currentVersion), String(currentVersion));
-  return currentVersion;
-}
-
-function getDbVersion() {
   try {
-    const row = db.prepare(`SELECT value FROM settings WHERE key = 'db_version'`).get();
-    if (row && row.value) {
-      currentVersion = Number(row.value);
-    }
-  } catch (err) {
-    console.error('Error getting DB version:', err);
+    return crypto.timingSafeEqual(Buffer.from(testHash, 'hex'), Buffer.from(hash, 'hex'));
+  } catch (_) {
+    return testHash === hash;
   }
-  return currentVersion;
 }
 
-// Initial Categories Seed Data
+// -------------------------------------------------------------
+// Schema Initialization & Non-Destructive Seed Migration
+// -------------------------------------------------------------
 const DEFAULT_CATEGORIES = [
   {
     id: 'chrome-hearts',
@@ -271,170 +325,512 @@ const DEFAULT_CATEGORIES = [
   }
 ];
 
-// Seed Categories
-function seedCategories() {
-  const insertCat = db.prepare(`
-    INSERT INTO categories (id, name, slug, section, display_order, description, image)
-    VALUES (@id, @name, @slug, @section, @display_order, @description, @image)
-    ON CONFLICT(id) DO UPDATE SET
-      name = excluded.name,
-      section = coalesce(categories.section, excluded.section),
-      display_order = excluded.display_order,
-      description = excluded.description,
-      image = excluded.image
-  `);
+let initPromise = null;
+let currentVersion = Date.now();
 
-  const runMany = db.transaction((cats) => {
-    for (const cat of cats) {
-      insertCat.run(cat);
-    }
-  });
+async function ensureSchema() {
+  const ddlStatements = [
+    `CREATE TABLE IF NOT EXISTS products (
+      id TEXT PRIMARY KEY,
+      original_id INTEGER,
+      name TEXT NOT NULL,
+      slug TEXT UNIQUE,
+      section TEXT DEFAULT 'accessories',
+      category TEXT NOT NULL,
+      price REAL NOT NULL,
+      comparePrice REAL,
+      description TEXT,
+      images TEXT,
+      variants TEXT,
+      stock INTEGER DEFAULT 25,
+      rating REAL DEFAULT 4.8,
+      numReviews INTEGER DEFAULT 12,
+      featured INTEGER DEFAULT 0,
+      newArrival INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'available',
+      sku_code TEXT,
+      branch_id INTEGER DEFAULT 2,
+      tags TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS categories (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      slug TEXT UNIQUE NOT NULL,
+      section TEXT DEFAULT 'accessories',
+      display_order INTEGER DEFAULT 0,
+      description TEXT,
+      image TEXT
+    )`,
+    `CREATE TABLE IF NOT EXISTS admin_users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      salt TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS admin_sessions (
+      token_hash TEXT PRIMARY KEY,
+      username TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    )`,
+    `CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL,
+      details TEXT,
+      timestamp TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS customers (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      phone TEXT,
+      email TEXT,
+      address TEXT DEFAULT '',
+      city TEXT DEFAULT '',
+      notes TEXT DEFAULT '',
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS orders (
+      id TEXT PRIMARY KEY,
+      order_number TEXT UNIQUE,
+      customer_id TEXT,
+      customer_name TEXT NOT NULL,
+      customer_phone TEXT,
+      customer_email TEXT,
+      shipping_address TEXT DEFAULT '',
+      items TEXT DEFAULT '[]',
+      subtotal REAL DEFAULT 0,
+      discount_amount REAL DEFAULT 0,
+      total_amount REAL NOT NULL DEFAULT 0,
+      payment_status TEXT DEFAULT 'pending',
+      order_status TEXT DEFAULT 'pending',
+      source TEXT DEFAULT 'whatsapp',
+      notes TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS banners (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      subtitle TEXT DEFAULT '',
+      badge_text TEXT DEFAULT '',
+      image_url TEXT DEFAULT '',
+      link_url TEXT DEFAULT '',
+      position TEXT DEFAULT 'hero',
+      active INTEGER DEFAULT 1,
+      display_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`
+  ];
 
-  runMany(DEFAULT_CATEGORIES);
+  await execStatements(ddlStatements);
+
+  // Safe migrations for older local DBs missing section columns
+  try { await execute("ALTER TABLE products ADD COLUMN section TEXT DEFAULT 'accessories'"); } catch (_) {}
+  try { await execute("ALTER TABLE categories ADD COLUMN section TEXT DEFAULT 'accessories'"); } catch (_) {}
+  try {
+    await execute("UPDATE products SET section = 'accessories' WHERE section IS NULL OR section = ''");
+    await execute("UPDATE categories SET section = 'accessories' WHERE section IS NULL OR section = ''");
+  } catch (_) {}
 }
 
-// Seed Admin User
-function seedAdminUser() {
+async function seedInitialDataIfEmpty() {
+  // 1. Seed categories ONLY if table has zero records (so admin edits & deletes are never overwritten)
+  const catCount = await queryOne(`SELECT COUNT(*) as count FROM categories`);
+  if (!catCount || Number(catCount.count) === 0) {
+    let seedCats = DEFAULT_CATEGORIES;
+    const backupFile = findBackupFile();
+    if (backupFile) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(backupFile, 'utf8'));
+        if (Array.isArray(parsed.categories) && parsed.categories.length > 0) {
+          seedCats = parsed.categories;
+        }
+      } catch (_) {}
+    }
+
+    const catStatements = seedCats.map(c => ({
+      sql: `INSERT OR IGNORE INTO categories (id, name, slug, section, display_order, description, image)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        c.id,
+        c.name,
+        c.slug || c.id,
+        c.section === 'clothing' ? 'clothing' : 'accessories',
+        Number(c.display_order) || 0,
+        c.description || '',
+        c.image || ''
+      ]
+    }));
+    if (catStatements.length > 0) await execStatements(catStatements);
+  }
+
+  // 2. Seed default admin user if missing
   const username = process.env.ADMIN_USER || 'admin';
   const rawPassword = process.env.ADMIN_PASSWORD || 'accessify2026';
-
-  const user = db.prepare(`SELECT * FROM admin_users WHERE username = ?`).get(username);
-  if (!user) {
+  const existingAdmin = await queryOne(`SELECT id FROM admin_users WHERE username = ?`, [username]);
+  if (!existingAdmin) {
     const { hash, salt } = hashPassword(rawPassword);
-    db.prepare(`
-      INSERT INTO admin_users (id, username, password_hash, salt)
-      VALUES (?, ?, ?, ?)
-    `).run(crypto.randomUUID(), username, hash, salt);
+    await execute(
+      `INSERT INTO admin_users (id, username, password_hash, salt) VALUES (?, ?, ?, ?)`,
+      [crypto.randomUUID(), username, hash, salt]
+    );
     console.log(`[DB] Default admin user initialized: ${username}`);
   }
-}
 
-// Seed Products from initial_products.json
-function seedProducts() {
-  const countRow = db.prepare(`SELECT COUNT(*) as count FROM products`).get();
-  if (countRow.count > 0) {
-    console.log(`[DB] Database already contains ${countRow.count} products.`);
+  // 3. Ensure session secret exists in settings so serverless instances verify the same HMAC tokens
+  const secretRow = await queryOne(`SELECT value FROM settings WHERE key = 'session_secret'`);
+  if (!secretRow || !secretRow.value) {
+    const newSecret = crypto.randomBytes(48).toString('hex');
+    await execute(
+      `INSERT OR IGNORE INTO settings (key, value) VALUES ('session_secret', ?)`,
+      [newSecret]
+    );
+  }
+
+  // 4. Seed products ONLY when products table is empty (preserve all existing data!)
+  const prodCount = await queryOne(`SELECT COUNT(*) as count FROM products`);
+  if (prodCount && Number(prodCount.count) > 0) {
     return;
   }
 
-  let jsonPath = null;
-  const jsonCandidates = [
-    path.join(DATA_DIR, 'initial_products.json'),
-    path.join(DATA_DIR, 'database_backup.json'),
-    path.join(process.cwd(), 'data', 'initial_products.json'),
-    path.join(process.cwd(), 'data', 'database_backup.json'),
-    path.join(__dirname, 'data', 'initial_products.json'),
-    path.join(__dirname, 'data', 'database_backup.json')
-  ];
+  // First try reading directly from bundled local SQLite if migrating to empty Turso
+  if (tursoClient) {
+    const localDbCandidate = [
+      path.join(process.cwd(), 'data', 'accessify.db'),
+      path.join(__dirname, 'data', 'accessify.db')
+    ].find(p => fs.existsSync(p));
 
-  for (const cand of jsonCandidates) {
-    if (fs.existsSync(cand)) {
-      jsonPath = cand;
-      break;
+    if (localDbCandidate) {
+      try {
+        const srcDb = new Database(localDbCandidate, { readonly: true });
+        const srcRows = srcDb.prepare(`SELECT * FROM products`).all();
+        srcDb.close();
+        if (srcRows.length > 0) {
+          console.log(`[DB] Migrating ${srcRows.length} products from local accessify.db into Turso...`);
+          const chunkSize = 40;
+          for (let i = 0; i < srcRows.length; i += chunkSize) {
+            const chunk = srcRows.slice(i, i + chunkSize).map(r => ({
+              sql: `INSERT OR IGNORE INTO products (
+                id, original_id, name, slug, section, category, price, comparePrice,
+                description, images, variants, stock, rating, numReviews,
+                featured, newArrival, status, sku_code, branch_id, tags, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              args: [
+                r.id, r.original_id ?? null, r.name, r.slug ?? null, r.section || 'accessories',
+                r.category, Number(r.price) || 0, r.comparePrice ?? null, r.description || '',
+                r.images || '[]', r.variants || '[]', r.stock ?? 25, r.rating ?? 4.8,
+                r.numReviews ?? 12, r.featured ? 1 : 0, r.newArrival ? 1 : 0,
+                r.status || 'available', r.sku_code || '', r.branch_id ?? 2, r.tags || '[]',
+                r.created_at || new Date().toISOString(), r.updated_at || new Date().toISOString()
+              ]
+            }));
+            await execStatements(chunk);
+          }
+          await bumpVersion();
+          console.log(`[DB] Successfully migrated ${srcRows.length} products into Turso.`);
+          return;
+        }
+      } catch (err) {
+        console.warn('[DB] Local SQLite read fallback skipped:', err.message);
+      }
     }
   }
 
+  // Fallback to JSON seed/backup
+  const jsonCandidates = [
+    path.join(localDataDir, 'database_backup.json'),
+    path.join(localDataDir, 'initial_products.json'),
+    path.join(process.cwd(), 'data', 'database_backup.json'),
+    path.join(process.cwd(), 'data', 'initial_products.json'),
+    path.join(__dirname, 'data', 'database_backup.json'),
+    path.join(__dirname, 'data', 'initial_products.json')
+  ];
+  const jsonPath = jsonCandidates.find(p => fs.existsSync(p));
   if (!jsonPath) {
-    console.warn(`[DB] No seed JSON file found, skipping product seed.`);
+    console.warn('[DB] No seed JSON file found, skipping product seed.');
     return;
   }
 
   const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
   const products = Array.isArray(raw) ? raw : (raw.products || []);
-  console.log(`[DB] Seeding ${products.length} authentic products into SQLite from ${jsonPath}...`);
+  console.log(`[DB] Seeding ${products.length} authentic products from ${jsonPath}...`);
 
-  const insertProduct = db.prepare(`
-    INSERT INTO products (
-      id, original_id, name, slug, category, price, comparePrice,
-      description, images, variants, stock, rating, numReviews,
-      featured, newArrival, status, sku_code, branch_id, tags
-    ) VALUES (
-      @id, @original_id, @name, @slug, @category, @price, @comparePrice,
-      @description, @images, @variants, @stock, @rating, @numReviews,
-      @featured, @newArrival, @status, @sku_code, @branch_id, @tags
-    )
-  `);
-
-  const seedTx = db.transaction((items) => {
-    for (const item of items) {
-      insertProduct.run({
-        id: item.id || `acc_${item.original_id || Date.now()}`,
-        original_id: item.original_id || null,
-        name: item.name,
-        slug: item.slug || (item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + (item.original_id || Math.floor(Math.random() * 10000))),
-        category: item.category,
-        price: Number(item.price) || 0,
-        comparePrice: item.comparePrice ? Number(item.comparePrice) : null,
-        description: item.description || '',
-        images: JSON.stringify(item.images || []),
-        variants: JSON.stringify(item.variants || []),
-        stock: item.stock !== undefined ? item.stock : 25,
-        rating: item.rating || 4.8,
-        numReviews: item.numReviews || 12,
-        featured: item.featured ? 1 : 0,
-        newArrival: item.newArrival ? 1 : 0,
-        status: (item.stock !== undefined && item.stock <= 0) ? 'sold_out' : (item.status || 'available'),
-        sku_code: item.sku_code || '',
-        branch_id: item.branch_id || 2,
-        tags: JSON.stringify(item.tags || [])
-      });
-    }
-  });
-
-  seedTx(products);
-  bumpVersion();
+  const chunkSize = 40;
+  for (let i = 0; i < products.length; i += chunkSize) {
+    const chunk = products.slice(i, i + chunkSize).map(item => ({
+      sql: `INSERT OR IGNORE INTO products (
+        id, original_id, name, slug, section, category, price, comparePrice,
+        description, images, variants, stock, rating, numReviews,
+        featured, newArrival, status, sku_code, branch_id, tags
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        item.id || `acc_${item.original_id || Date.now()}`,
+        item.original_id ?? null,
+        item.name,
+        item.slug || `${slugify(item.name)}-${item.original_id || Math.floor(Math.random() * 10000)}`,
+        item.section === 'clothing' ? 'clothing' : 'accessories',
+        item.category,
+        Number(item.price) || 0,
+        item.comparePrice ? Number(item.comparePrice) : null,
+        item.description || '',
+        JSON.stringify(Array.isArray(item.images) ? item.images : []),
+        JSON.stringify(Array.isArray(item.variants) ? item.variants : []),
+        item.stock !== undefined ? Number(item.stock) : 25,
+        item.rating || 4.8,
+        item.numReviews || 12,
+        item.featured ? 1 : 0,
+        item.newArrival ? 1 : 0,
+        (item.stock !== undefined && item.stock <= 0) ? 'sold_out' : (item.status || 'available'),
+        item.sku_code || '',
+        item.branch_id || 2,
+        JSON.stringify(Array.isArray(item.tags) ? item.tags : [])
+      ]
+    }));
+    await execStatements(chunk);
+  }
+  await bumpVersion();
   console.log(`[DB] Successfully seeded ${products.length} products.`);
 }
 
-// Run initial seedings
-seedCategories();
-seedAdminUser();
-seedProducts();
-getDbVersion();
+function findBackupFile() {
+  const candidates = [
+    path.join(localDataDir, 'database_backup.json'),
+    path.join(process.cwd(), 'data', 'database_backup.json'),
+    path.join(__dirname, 'data', 'database_backup.json')
+  ];
+  return candidates.find(p => fs.existsSync(p)) || null;
+}
+
+export async function ensureInitialized() {
+  if (!initPromise) {
+    initPromise = (async () => {
+      await ensureSchema();
+      await seedInitialDataIfEmpty();
+      await getDbVersion();
+    })().catch(err => {
+      initPromise = null;
+      throw err;
+    });
+  }
+  return initPromise;
+}
+
+export function getDbMode() {
+  return dbMode;
+}
 
 // -------------------------------------------------------------
-// Database Query API
+// Version Management & Auth Sessions
 // -------------------------------------------------------------
+export async function bumpVersion() {
+  const next = Date.now();
+  currentVersion = next > currentVersion ? next : currentVersion + 1;
+  await execute(
+    `INSERT INTO settings (key, value) VALUES ('db_version', ?) ON CONFLICT(key) DO UPDATE SET value = ?`,
+    [String(currentVersion), String(currentVersion)]
+  );
+  return currentVersion;
+}
 
-export function getAllCategories(section) {
+export async function getDbVersion() {
+  await ensureInitializedInternal();
+  try {
+    const row = await queryOne(`SELECT value FROM settings WHERE key = 'db_version'`);
+    if (row && row.value) {
+      currentVersion = Number(row.value);
+    }
+  } catch (err) {
+    console.error('Error getting DB version:', err);
+  }
+  return currentVersion;
+}
+
+async function ensureInitializedInternal() {
+  if (!initPromise) {
+    await ensureInitialized();
+  }
+}
+
+export async function getSessionSecret() {
+  await ensureInitialized();
+  if (process.env.ADMIN_SESSION_SECRET) return process.env.ADMIN_SESSION_SECRET;
+  const row = await queryOne(`SELECT value FROM settings WHERE key = 'session_secret'`);
+  if (row && row.value) return row.value;
+  const generated = crypto.randomBytes(48).toString('hex');
+  await execute(
+    `INSERT INTO settings (key, value) VALUES ('session_secret', ?) ON CONFLICT(key) DO UPDATE SET value = ?`,
+    [generated, generated]
+  );
+  return generated;
+}
+
+export async function verifyAdminCredentials(username, password) {
+  await ensureInitialized();
+  const user = await queryOne(`SELECT * FROM admin_users WHERE username = ?`, [username]);
+  if (!user) return false;
+  return verifyPassword(password, user.password_hash, user.salt);
+}
+
+export async function updateAdminPassword(username, currentPassword, newPassword) {
+  await ensureInitialized();
+  const valid = await verifyAdminCredentials(username, currentPassword);
+  if (!valid) return { success: false, error: 'Current password is incorrect' };
+  if (!newPassword || newPassword.length < 6) {
+    return { success: false, error: 'New password must be at least 6 characters' };
+  }
+  const { hash, salt } = hashPassword(newPassword);
+  await execute(`UPDATE admin_users SET password_hash = ?, salt = ? WHERE username = ?`, [hash, salt, username]);
+  await logAudit('PASSWORD_UPDATED', `Admin password updated for ${username}`);
+  return { success: true };
+}
+
+export async function createSessionRecord(tokenHash, username, expiresAt) {
+  await ensureInitialized();
+  // Clean up expired sessions periodically
+  try {
+    await execute(`DELETE FROM admin_sessions WHERE expires_at < ?`, [Date.now()]);
+  } catch (_) {}
+  await execute(
+    `INSERT OR REPLACE INTO admin_sessions (token_hash, username, expires_at) VALUES (?, ?, ?)`,
+    [tokenHash, username, expiresAt]
+  );
+}
+
+export async function verifySessionRecord(tokenHash) {
+  await ensureInitialized();
+  const row = await queryOne(`SELECT username, expires_at FROM admin_sessions WHERE token_hash = ?`, [tokenHash]);
+  if (!row) return null;
+  if (Number(row.expires_at) < Date.now()) {
+    await execute(`DELETE FROM admin_sessions WHERE token_hash = ?`, [tokenHash]);
+    return null;
+  }
+  return { username: row.username, expiresAt: Number(row.expires_at) };
+}
+
+export async function deleteSessionRecord(tokenHash) {
+  await ensureInitialized();
+  await execute(`DELETE FROM admin_sessions WHERE token_hash = ?`, [tokenHash]);
+}
+
+// -------------------------------------------------------------
+// Categories CRUD
+// -------------------------------------------------------------
+export async function getAllCategories(section) {
+  await ensureInitialized();
   let sql = `SELECT * FROM categories`;
-  let params = [];
+  const params = [];
   if (section && section !== 'all') {
     sql += ` WHERE section = ?`;
     params.push(section);
   }
-  sql += ` ORDER BY display_order ASC`;
-  const cats = db.prepare(sql).all(...params);
-  return cats.map(c => {
-    let countRow;
+  sql += ` ORDER BY display_order ASC, name ASC`;
+  const cats = await queryAll(sql, params);
+
+  const results = [];
+  for (const c of cats) {
     const catSec = c.section || 'accessories';
+    let countRow;
     if (c.id === 'rings') {
-      countRow = db.prepare(`
-        SELECT COUNT(*) as count FROM products 
-        WHERE status != 'hidden' AND section = ? AND (
-          category = 'rings' 
-          OR tags LIKE '%"rings"%' 
-          OR tags LIKE '%"ring"%' 
-          OR LOWER(name) LIKE '% ring%' 
+      countRow = await queryOne(`
+        SELECT COUNT(*) as count FROM products
+        WHERE status NOT IN ('hidden', 'inactive') AND section = ? AND (
+          category = 'rings'
+          OR tags LIKE '%"rings"%'
+          OR tags LIKE '%"ring"%'
+          OR LOWER(name) LIKE '% ring%'
           OR LOWER(name) LIKE 'ring %'
         ) AND LOWER(name) NOT LIKE '%earring%'
-      `).get(catSec);
+      `, [catSec]);
     } else {
-      countRow = db.prepare(`
-        SELECT COUNT(*) as count FROM products 
-        WHERE status != 'hidden' AND section = ? AND (category = ? OR tags LIKE ?)
-      `).get(catSec, c.id, `%"${c.id}"%`);
+      countRow = await queryOne(`
+        SELECT COUNT(*) as count FROM products
+        WHERE status NOT IN ('hidden', 'inactive') AND section = ? AND (category = ? OR tags LIKE ?)
+      `, [catSec, c.id, `%"${c.id}"%`]);
     }
-
-    return {
+    results.push({
       ...c,
       section: catSec,
-      count: countRow ? countRow.count : 0
-    };
-  });
+      count: countRow ? Number(countRow.count) : 0
+    });
+  }
+  return results;
 }
 
-export function getProducts(options = {}) {
+export async function addCategory(data) {
+  await ensureInitialized();
+  const baseId = slugify(data.id || data.name);
+  let id = baseId;
+  const existing = await queryOne(`SELECT id FROM categories WHERE id = ? OR slug = ?`, [id, id]);
+  if (existing) {
+    id = `${baseId}-${Date.now().toString().slice(-4)}`;
+  }
+  const slug = data.slug ? slugify(data.slug) : id;
+  const section = data.section === 'clothing' ? 'clothing' : 'accessories';
+  const displayOrder = data.display_order !== undefined && data.display_order !== '' ? Number(data.display_order) : 99;
+
+  await execute(
+    `INSERT INTO categories (id, name, slug, section, display_order, description, image) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, data.name.trim(), slug, section, displayOrder, data.description || '', data.image || '']
+  );
+  await logAudit('CREATE_CATEGORY', `Created category ${data.name.trim()} (${id}) in [${section.toUpperCase()}]`);
+  await bumpVersion();
+  return await queryOne(`SELECT * FROM categories WHERE id = ?`, [id]);
+}
+
+export async function updateCategory(id, data) {
+  await ensureInitialized();
+  const current = await queryOne(`SELECT * FROM categories WHERE id = ?`, [id]);
+  if (!current) return null;
+
+  const nextName = data.name !== undefined ? String(data.name).trim() : current.name;
+  const nextSection = data.section !== undefined ? (data.section === 'clothing' ? 'clothing' : 'accessories') : current.section;
+  const nextOrder = data.display_order !== undefined && data.display_order !== '' ? Number(data.display_order) : current.display_order;
+  const nextDesc = data.description !== undefined ? data.description : current.description;
+  const nextImg = data.image !== undefined ? data.image : current.image;
+
+  await execute(
+    `UPDATE categories SET name = ?, section = ?, display_order = ?, description = ?, image = ? WHERE id = ?`,
+    [nextName, nextSection, nextOrder, nextDesc, nextImg, id]
+  );
+
+  // If category moved sections, optionally keep products aligned if requested
+  if (data.syncProductsSection && nextSection !== current.section) {
+    await execute(`UPDATE products SET section = ?, updated_at = datetime('now') WHERE category = ?`, [nextSection, id]);
+  }
+
+  await logAudit('UPDATE_CATEGORY', `Updated category ${nextName} (${id})`);
+  await bumpVersion();
+  return await queryOne(`SELECT * FROM categories WHERE id = ?`, [id]);
+}
+
+export async function deleteCategory(id) {
+  await ensureInitialized();
+  const current = await queryOne(`SELECT name FROM categories WHERE id = ?`, [id]);
+  if (!current) return false;
+  const res = await execute(`DELETE FROM categories WHERE id = ?`, [id]);
+  if (res.changes > 0) {
+    await logAudit('DELETE_CATEGORY', `Deleted category ${current.name} (${id})`);
+    await bumpVersion();
+    return true;
+  }
+  return false;
+}
+
+// -------------------------------------------------------------
+// Products CRUD & Queries
+// -------------------------------------------------------------
+export async function getProducts(options = {}) {
+  await ensureInitialized();
   const {
     section,
     category,
@@ -447,11 +843,11 @@ export function getProducts(options = {}) {
     includeHidden = false
   } = options;
 
-  let conditions = [];
-  let params = [];
+  const conditions = [];
+  const params = [];
 
   if (!includeHidden) {
-    conditions.push("status != 'hidden'");
+    conditions.push("status NOT IN ('hidden', 'inactive')");
   }
 
   if (section && section !== 'all') {
@@ -462,10 +858,10 @@ export function getProducts(options = {}) {
   if (category && category !== 'all') {
     if (category === 'rings') {
       conditions.push(`(
-        category = 'rings' 
-        OR tags LIKE '%"rings"%' 
-        OR tags LIKE '%"ring"%' 
-        OR LOWER(name) LIKE '% ring%' 
+        category = 'rings'
+        OR tags LIKE '%"rings"%'
+        OR tags LIKE '%"ring"%'
+        OR LOWER(name) LIKE '% ring%'
         OR LOWER(name) LIKE 'ring %'
       ) AND LOWER(name) NOT LIKE '%earring%'`);
     } else {
@@ -474,11 +870,13 @@ export function getProducts(options = {}) {
     }
   }
 
-  if (status === 'available') {
-    conditions.push("status = 'available' AND stock > 0");
+  if (status === 'available' || status === 'active') {
+    conditions.push("status IN ('available', 'active') AND stock > 0");
   } else if (status === 'sold_out') {
-    conditions.push("(status = 'sold_out' OR stock <= 0)");
-  } else if (status) {
+    conditions.push("(status = 'sold_out' OR stock <= 0) AND status NOT IN ('hidden', 'inactive')");
+  } else if (status === 'hidden' || status === 'inactive') {
+    conditions.push("status IN ('hidden', 'inactive')");
+  } else if (status && status !== 'all') {
     conditions.push("status = ?");
     params.push(status);
   }
@@ -495,7 +893,7 @@ export function getProducts(options = {}) {
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-  let orderBy = "ORDER BY featured DESC, newArrival DESC, id DESC";
+  let orderBy = "ORDER BY featured DESC, newArrival DESC, created_at DESC, id DESC";
   if (sort === 'price_asc') {
     orderBy = "ORDER BY price ASC";
   } else if (sort === 'price_desc') {
@@ -503,283 +901,725 @@ export function getProducts(options = {}) {
   } else if (sort === 'name_asc') {
     orderBy = "ORDER BY name ASC";
   } else if (sort === 'newest') {
-    orderBy = "ORDER BY newArrival DESC, created_at DESC";
+    orderBy = "ORDER BY created_at DESC, newArrival DESC, id DESC";
   }
+
+  const totalRow = await queryOne(`SELECT COUNT(*) as count FROM products ${whereClause}`, params);
+  const total = totalRow ? Number(totalRow.count) : 0;
 
   let limitClause = '';
+  const rowParams = [...params];
   if (limit) {
     limitClause = `LIMIT ? OFFSET ?`;
-    params.push(Number(limit), Number(offset));
+    rowParams.push(Number(limit), Number(offset));
   }
 
-  const totalStmt = db.prepare(`SELECT COUNT(*) as count FROM products ${whereClause}`);
-  const total = totalStmt.get(...params.slice(0, conditions.length > 0 ? params.length - (limit ? 2 : 0) : 0)).count;
-
-  const sql = `SELECT * FROM products ${whereClause} ${orderBy} ${limitClause}`;
-  const rows = db.prepare(sql).all(...params);
-
-  const formatted = rows.map(r => ({
-    ...r,
-    section: r.section || 'accessories',
-    images: JSON.parse(r.images || '[]'),
-    variants: JSON.parse(r.variants || '[]'),
-    tags: JSON.parse(r.tags || '[]'),
-    featured: Boolean(r.featured),
-    newArrival: Boolean(r.newArrival)
-  }));
+  const rows = await queryAll(`SELECT * FROM products ${whereClause} ${orderBy} ${limitClause}`, rowParams);
+  const formatted = rows.map(formatProductRow);
+  const version = await getDbVersion();
 
   return {
     total,
     count: formatted.length,
-    version: currentVersion,
+    version,
     products: formatted
   };
 }
 
-export function getProductByIdOrSlug(idOrSlug) {
-  const row = db.prepare(`SELECT * FROM products WHERE id = ? OR slug = ?`).get(idOrSlug, idOrSlug);
+export async function getProductByIdOrSlug(idOrSlug) {
+  await ensureInitialized();
+  const row = await queryOne(`SELECT * FROM products WHERE id = ? OR slug = ?`, [idOrSlug, idOrSlug]);
   if (!row) return null;
 
-  const product = {
-    ...row,
-    section: row.section || 'accessories',
-    images: JSON.parse(row.images || '[]'),
-    variants: JSON.parse(row.variants || '[]'),
-    tags: JSON.parse(row.tags || '[]'),
-    featured: Boolean(row.featured),
-    newArrival: Boolean(row.newArrival)
-  };
+  const product = formatProductRow(row);
 
-  // Fetch 4 related products in same section & category
-  const relatedRows = db.prepare(`
+  const relatedRows = await queryAll(`
     SELECT * FROM products
-    WHERE section = ? AND category = ? AND id != ? AND status != 'hidden'
+    WHERE section = ? AND category = ? AND id != ? AND status NOT IN ('hidden', 'inactive')
     ORDER BY featured DESC, id DESC
     LIMIT 4
-  `).all(product.section, product.category, product.id);
+  `, [product.section, product.category, product.id]);
 
-  const related = relatedRows.map(r => ({
-    ...r,
-    section: r.section || 'accessories',
-    images: JSON.parse(r.images || '[]'),
-    variants: JSON.parse(r.variants || '[]'),
-    tags: JSON.parse(r.tags || '[]'),
-    featured: Boolean(r.featured),
-    newArrival: Boolean(r.newArrival)
-  }));
-
-  return { product, related };
+  return {
+    product,
+    related: relatedRows.map(formatProductRow)
+  };
 }
 
-export function createProduct(data) {
-  const id = data.id || `acc_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
-  const slug = data.slug || (data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString().slice(-4));
-  const section = (data.section === 'clothing') ? 'clothing' : 'accessories';
+async function generateUniqueProductSlug(name, requestedSlug, excludeId = null) {
+  const base = slugify(requestedSlug || name);
+  let candidate = base;
+  let attempt = 0;
 
-  const stmt = db.prepare(`
+  while (attempt < 10) {
+    const existing = excludeId
+      ? await queryOne(`SELECT id FROM products WHERE slug = ? AND id != ?`, [candidate, excludeId])
+      : await queryOne(`SELECT id FROM products WHERE slug = ?`, [candidate]);
+    if (!existing) return candidate;
+    attempt++;
+    candidate = `${base}-${Date.now().toString().slice(-4)}-${crypto.randomBytes(2).toString('hex')}`;
+  }
+  return `${base}-${crypto.randomBytes(4).toString('hex')}`;
+}
+
+export async function createProduct(data) {
+  await ensureInitialized();
+  const cleanName = String(data.name || '').trim();
+  const section = data.section === 'clothing' ? 'clothing' : 'accessories';
+
+  // Duplicate guard: reject identical name + category created within the last 5 seconds (accidental double submit)
+  const recentDup = await queryOne(
+    `SELECT id, name FROM products WHERE LOWER(name) = LOWER(?) AND category = ? AND created_at >= datetime('now', '-5 seconds')`,
+    [cleanName, data.category]
+  );
+  if (recentDup && !data.allowDuplicate) {
+    const err = new Error(`A product named "${recentDup.name}" in this category was just created. Duplicate submission prevented.`);
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const id = data.id || `acc_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+  const slug = await generateUniqueProductSlug(cleanName, data.slug);
+
+  let stock = data.stock !== undefined && data.stock !== '' ? Math.max(0, Number(data.stock) || 0) : 25;
+  let status = normalizeProductStatus(data.status || 'available');
+  if (stock <= 0 && status === 'available') {
+    status = 'sold_out';
+  } else if (status === 'sold_out' && stock > 0 && data.syncStockOnSoldOut) {
+    stock = 0;
+  }
+
+  const imagesArr = Array.isArray(data.images) ? data.images : (data.images ? [data.images] : []);
+  const variantsArr = Array.isArray(data.variants) ? data.variants : [];
+  const tagsArr = Array.isArray(data.tags) ? data.tags : [];
+  const sku = (data.sku_code && String(data.sku_code).trim()) || `ACC-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+
+  await execute(`
     INSERT INTO products (
       id, original_id, name, slug, section, category, price, comparePrice,
       description, images, variants, stock, rating, numReviews,
       featured, newArrival, status, sku_code, branch_id, tags
-    ) VALUES (
-      @id, @original_id, @name, @slug, @section, @category, @price, @comparePrice,
-      @description, @images, @variants, @stock, @rating, @numReviews,
-      @featured, @newArrival, @status, @sku_code, @branch_id, @tags
-    )
-  `);
-
-  stmt.run({
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
     id,
-    original_id: data.original_id || null,
-    name: data.name.trim(),
+    data.original_id || null,
+    cleanName,
     slug,
     section,
-    category: data.category,
-    price: Number(data.price),
-    comparePrice: data.comparePrice ? Number(data.comparePrice) : null,
-    description: data.description || '',
-    images: JSON.stringify(Array.isArray(data.images) ? data.images : (data.images ? [data.images] : [])),
-    variants: JSON.stringify(Array.isArray(data.variants) ? data.variants : []),
-    stock: data.stock !== undefined ? Number(data.stock) : 25,
-    rating: data.rating ? Number(data.rating) : 4.8,
-    numReviews: data.numReviews ? Number(data.numReviews) : 12,
-    featured: data.featured ? 1 : 0,
-    newArrival: data.newArrival !== undefined ? (data.newArrival ? 1 : 0) : 1,
-    status: data.status || 'available',
-    sku_code: data.sku_code || `SKU-${Date.now().toString().slice(-6)}`,
-    branch_id: data.branch_id || 2,
-    tags: JSON.stringify(Array.isArray(data.tags) ? data.tags : [])
-  });
+    data.category,
+    Number(data.price),
+    data.comparePrice !== undefined && data.comparePrice !== '' && data.comparePrice !== null ? Number(data.comparePrice) : null,
+    data.description || '',
+    JSON.stringify(imagesArr),
+    JSON.stringify(variantsArr),
+    stock,
+    data.rating ? Number(data.rating) : 4.8,
+    data.numReviews ? Number(data.numReviews) : 12,
+    data.featured ? 1 : 0,
+    data.newArrival !== undefined ? (data.newArrival ? 1 : 0) : 1,
+    status,
+    sku,
+    data.branch_id || 2,
+    JSON.stringify(tagsArr)
+  ]);
 
-  logAudit('CREATE_PRODUCT', `Created product ${data.name} (${id}) in [${section.toUpperCase()}]`);
-  bumpVersion();
+  await logAudit('CREATE_PRODUCT', `Created product ${cleanName} (${id}) in [${section.toUpperCase()}]`);
+  await bumpVersion();
 
-  return getProductByIdOrSlug(id)?.product;
+  const res = await getProductByIdOrSlug(id);
+  return res?.product;
 }
 
-export function updateProduct(id, data) {
-  const current = db.prepare(`SELECT * FROM products WHERE id = ?`).get(id);
+export async function updateProduct(id, data) {
+  await ensureInitialized();
+  const current = await queryOne(`SELECT * FROM products WHERE id = ?`, [id]);
   if (!current) return null;
 
-  const updatedImages = data.images !== undefined
-    ? JSON.stringify(Array.isArray(data.images) ? data.images : [data.images])
-    : current.images;
+  const nextName = data.name !== undefined ? String(data.name).trim() : current.name;
+  const nextSlug = data.slug ? await generateUniqueProductSlug(nextName, data.slug, id) : current.slug;
+  const nextSection = data.section !== undefined ? (data.section === 'clothing' ? 'clothing' : 'accessories') : (current.section || 'accessories');
+  const nextCategory = data.category !== undefined && data.category !== '' ? data.category : current.category;
+  const nextPrice = data.price !== undefined && data.price !== '' ? Number(data.price) : Number(current.price);
 
-  const updatedVariants = data.variants !== undefined
-    ? JSON.stringify(Array.isArray(data.variants) ? data.variants : [])
-    : current.variants;
+  let nextComparePrice = current.comparePrice;
+  if (data.comparePrice !== undefined) {
+    nextComparePrice = (data.comparePrice === '' || data.comparePrice === null) ? null : Number(data.comparePrice);
+  }
 
-  const updatedTags = data.tags !== undefined
-    ? JSON.stringify(Array.isArray(data.tags) ? data.tags : [])
-    : current.tags;
+  let nextStock = data.stock !== undefined && data.stock !== '' ? Math.max(0, Number(data.stock) || 0) : Number(current.stock ?? 25);
+  let nextStatus = data.status !== undefined && data.status !== '' ? normalizeProductStatus(data.status) : normalizeProductStatus(current.status);
 
-  const stmt = db.prepare(`
+  // Sync stock/status coherently
+  if (data.status === 'available' && nextStock <= 0 && data.stock === undefined) {
+    nextStock = 1;
+  } else if (data.stock !== undefined && nextStock <= 0 && nextStatus === 'available') {
+    nextStatus = 'sold_out';
+  } else if (data.stock !== undefined && nextStock > 0 && current.stock <= 0 && data.status === undefined && normalizeProductStatus(current.status) === 'sold_out') {
+    nextStatus = 'available';
+  }
+
+  const nextDesc = data.description !== undefined ? data.description : current.description;
+  const nextImages = data.images !== undefined ? JSON.stringify(Array.isArray(data.images) ? data.images : [data.images]) : current.images;
+  const nextVariants = data.variants !== undefined ? JSON.stringify(Array.isArray(data.variants) ? data.variants : []) : current.variants;
+  const nextTags = data.tags !== undefined ? JSON.stringify(Array.isArray(data.tags) ? data.tags : []) : current.tags;
+  const nextFeatured = data.featured !== undefined ? (data.featured ? 1 : 0) : current.featured;
+  const nextNewArrival = data.newArrival !== undefined ? (data.newArrival ? 1 : 0) : current.newArrival;
+  const nextSku = data.sku_code !== undefined ? String(data.sku_code).trim() : current.sku_code;
+
+  await execute(`
     UPDATE products SET
-      name = coalesce(@name, name),
-      slug = coalesce(@slug, slug),
-      section = coalesce(@section, section),
-      category = coalesce(@category, category),
-      price = coalesce(@price, price),
-      comparePrice = @comparePrice,
-      description = coalesce(@description, description),
-      images = @images,
-      variants = @variants,
-      stock = coalesce(@stock, stock),
-      featured = coalesce(@featured, featured),
-      newArrival = coalesce(@newArrival, newArrival),
-      status = coalesce(@status, status),
-      sku_code = coalesce(@sku_code, sku_code),
-      tags = @tags,
+      name = ?,
+      slug = ?,
+      section = ?,
+      category = ?,
+      price = ?,
+      comparePrice = ?,
+      description = ?,
+      images = ?,
+      variants = ?,
+      stock = ?,
+      featured = ?,
+      newArrival = ?,
+      status = ?,
+      sku_code = ?,
+      tags = ?,
       updated_at = datetime('now')
-    WHERE id = @id
-  `);
+    WHERE id = ?
+  `, [
+    nextName,
+    nextSlug,
+    nextSection,
+    nextCategory,
+    nextPrice,
+    nextComparePrice,
+    nextDesc,
+    nextImages,
+    nextVariants,
+    nextStock,
+    nextFeatured,
+    nextNewArrival,
+    nextStatus,
+    nextSku,
+    nextTags,
+    id
+  ]);
 
-  stmt.run({
-    id,
-    name: data.name !== undefined ? data.name.trim() : null,
-    slug: data.slug || null,
-    section: data.section ? ((data.section === 'clothing') ? 'clothing' : 'accessories') : null,
-    category: data.category || null,
-    price: data.price !== undefined ? Number(data.price) : null,
-    comparePrice: data.comparePrice !== undefined ? (data.comparePrice ? Number(data.comparePrice) : null) : current.comparePrice,
-    description: data.description !== undefined ? data.description : null,
-    images: updatedImages,
-    variants: updatedVariants,
-    stock: data.stock !== undefined ? Number(data.stock) : null,
-    featured: data.featured !== undefined ? (data.featured ? 1 : 0) : null,
-    newArrival: data.newArrival !== undefined ? (data.newArrival ? 1 : 0) : null,
-    status: data.status || null,
-    sku_code: data.sku_code || null,
-    tags: updatedTags
-  });
+  await logAudit('UPDATE_PRODUCT', `Updated product ${nextName} (${id}) [${nextSection.toUpperCase()}]`);
+  await bumpVersion();
 
-  logAudit('UPDATE_PRODUCT', `Updated product ${id} (${data.section ? 'Section: ' + data.section : 'Kept section'})`);
-  bumpVersion();
-
-  return getProductByIdOrSlug(id)?.product;
+  const res = await getProductByIdOrSlug(id);
+  return res?.product;
 }
 
-export function deleteProduct(id) {
-  const current = db.prepare(`SELECT name FROM products WHERE id = ?`).get(id);
+export async function deleteProduct(id) {
+  await ensureInitialized();
+  const current = await queryOne(`SELECT name FROM products WHERE id = ?`, [id]);
   if (!current) return false;
 
-  db.prepare(`DELETE FROM products WHERE id = ?`).run(id);
-  logAudit('DELETE_PRODUCT', `Deleted product ${current.name} (${id})`);
-  bumpVersion();
+  await execute(`DELETE FROM products WHERE id = ?`, [id]);
+  await logAudit('DELETE_PRODUCT', `Deleted product ${current.name} (${id})`);
+  await bumpVersion();
   return true;
 }
 
-export function setProductStatus(id, status) {
-  const stmt = db.prepare(`UPDATE products SET status = ?, updated_at = datetime('now') WHERE id = ?`);
-  const res = stmt.run(status, id);
-  if (res.changes > 0) {
-    logAudit('STATUS_CHANGE', `Set product ${id} status to ${status}`);
-    bumpVersion();
-    return true;
+export async function setProductStatus(id, rawStatus) {
+  await ensureInitialized();
+  const status = normalizeProductStatus(rawStatus);
+  const current = await queryOne(`SELECT stock, name FROM products WHERE id = ?`, [id]);
+  if (!current) return null;
+
+  let nextStock = Number(current.stock ?? 25);
+  if (status === 'available' && nextStock <= 0) {
+    nextStock = 10;
   }
-  return false;
+
+  const res = await execute(
+    `UPDATE products SET status = ?, stock = ?, updated_at = datetime('now') WHERE id = ?`,
+    [status, nextStock, id]
+  );
+
+  if (res.changes > 0) {
+    await logAudit('STATUS_CHANGE', `Set ${current.name} (${id}) status to ${status} (stock: ${nextStock})`);
+    await bumpVersion();
+    return (await getProductByIdOrSlug(id))?.product;
+  }
+  return null;
 }
 
-export function getDashboardStats() {
-  const total = db.prepare(`SELECT COUNT(*) as count FROM products WHERE status != 'hidden'`).get().count;
-  const accessoriesTotal = db.prepare(`SELECT COUNT(*) as count FROM products WHERE section = 'accessories' AND status != 'hidden'`).get().count;
-  const clothingTotal = db.prepare(`SELECT COUNT(*) as count FROM products WHERE section = 'clothing' AND status != 'hidden'`).get().count;
-  const available = db.prepare(`SELECT COUNT(*) as count FROM products WHERE status = 'available' AND stock > 0`).get().count;
-  const soldOut = db.prepare(`SELECT COUNT(*) as count FROM products WHERE status = 'sold_out' OR stock <= 0`).get().count;
-  const hidden = db.prepare(`SELECT COUNT(*) as count FROM products WHERE status = 'hidden'`).get().count;
-  const categoriesCount = db.prepare(`SELECT COUNT(*) as count FROM categories`).get().count;
+export async function updateProductStock(id, stockValue) {
+  await ensureInitialized();
+  const current = await queryOne(`SELECT name, status FROM products WHERE id = ?`, [id]);
+  if (!current) return null;
 
-  const recent = db.prepare(`
+  const stock = Math.max(0, Math.floor(Number(stockValue) || 0));
+  let status = normalizeProductStatus(current.status);
+  if (stock === 0 && status === 'available') {
+    status = 'sold_out';
+  } else if (stock > 0 && status === 'sold_out') {
+    status = 'available';
+  }
+
+  await execute(
+    `UPDATE products SET stock = ?, status = ?, updated_at = datetime('now') WHERE id = ?`,
+    [stock, status, id]
+  );
+
+  await logAudit('STOCK_UPDATE', `Updated ${current.name} (${id}) stock to ${stock} (${status})`);
+  await bumpVersion();
+  return (await getProductByIdOrSlug(id))?.product;
+}
+
+// -------------------------------------------------------------
+// Orders CRUD
+// -------------------------------------------------------------
+export async function getOrders(options = {}) {
+  await ensureInitialized();
+  const { status, search } = options;
+  const conditions = [];
+  const params = [];
+
+  if (status && status !== 'all') {
+    conditions.push('order_status = ?');
+    params.push(status);
+  }
+  if (search && search.trim()) {
+    const q = `%${search.trim().toLowerCase()}%`;
+    conditions.push('(LOWER(order_number) LIKE ? OR LOWER(customer_name) LIKE ? OR LOWER(customer_phone) LIKE ? OR LOWER(customer_email) LIKE ?)');
+    params.push(q, q, q, q);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const rows = await queryAll(`SELECT * FROM orders ${where} ORDER BY created_at DESC`, params);
+  return rows.map(r => ({
+    ...r,
+    items: parseJsonArray(r.items),
+    subtotal: Number(r.subtotal) || 0,
+    discount_amount: Number(r.discount_amount) || 0,
+    total_amount: Number(r.total_amount) || 0
+  }));
+}
+
+export async function createOrder(data) {
+  await ensureInitialized();
+  const id = data.id || `ord_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
+  const orderNumber = data.order_number || `ACC-ORD-${Date.now().toString().slice(-6)}`;
+  const items = Array.isArray(data.items) ? data.items : [];
+  const subtotal = data.subtotal !== undefined ? Number(data.subtotal) : items.reduce((s, it) => s + (Number(it.price || 0) * Number(it.qty || 1)), 0);
+  const discount = Number(data.discount_amount) || 0;
+  const total = data.total_amount !== undefined && data.total_amount !== '' ? Number(data.total_amount) : Math.max(0, subtotal - discount);
+
+  // Automatically create/find customer record if phone or email is supplied
+  let customerId = data.customer_id || null;
+  if (!customerId && data.customer_name && (data.customer_phone || data.customer_email)) {
+    const existingCust = data.customer_phone
+      ? await queryOne(`SELECT id FROM customers WHERE phone = ?`, [String(data.customer_phone).trim()])
+      : await queryOne(`SELECT id FROM customers WHERE LOWER(email) = LOWER(?)`, [String(data.customer_email).trim()]);
+
+    if (existingCust) {
+      customerId = existingCust.id;
+    } else {
+      const cust = await createCustomer({
+        name: data.customer_name,
+        phone: data.customer_phone || '',
+        email: data.customer_email || '',
+        address: data.shipping_address || ''
+      });
+      customerId = cust.id;
+    }
+  }
+
+  await execute(`
+    INSERT INTO orders (
+      id, order_number, customer_id, customer_name, customer_phone, customer_email,
+      shipping_address, items, subtotal, discount_amount, total_amount,
+      payment_status, order_status, source, notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    id,
+    orderNumber,
+    customerId,
+    String(data.customer_name || '').trim(),
+    data.customer_phone || '',
+    data.customer_email || '',
+    data.shipping_address || '',
+    JSON.stringify(items),
+    subtotal,
+    discount,
+    total,
+    data.payment_status || 'pending',
+    data.order_status || 'pending',
+    data.source || 'whatsapp',
+    data.notes || ''
+  ]);
+
+  await logAudit('CREATE_ORDER', `Created order ${orderNumber} for ${data.customer_name} (₹${total})`);
+  await bumpVersion();
+  const row = await queryOne(`SELECT * FROM orders WHERE id = ?`, [id]);
+  return { ...row, items: parseJsonArray(row.items) };
+}
+
+export async function updateOrder(id, data) {
+  await ensureInitialized();
+  const current = await queryOne(`SELECT * FROM orders WHERE id = ?`, [id]);
+  if (!current) return null;
+
+  const items = data.items !== undefined ? JSON.stringify(Array.isArray(data.items) ? data.items : []) : current.items;
+  const total = data.total_amount !== undefined ? Number(data.total_amount) : current.total_amount;
+  const subtotal = data.subtotal !== undefined ? Number(data.subtotal) : current.subtotal;
+  const discount = data.discount_amount !== undefined ? Number(data.discount_amount) : current.discount_amount;
+
+  await execute(`
+    UPDATE orders SET
+      customer_name = ?,
+      customer_phone = ?,
+      customer_email = ?,
+      shipping_address = ?,
+      items = ?,
+      subtotal = ?,
+      discount_amount = ?,
+      total_amount = ?,
+      payment_status = ?,
+      order_status = ?,
+      source = ?,
+      notes = ?,
+      updated_at = datetime('now')
+    WHERE id = ?
+  `, [
+    data.customer_name !== undefined ? data.customer_name : current.customer_name,
+    data.customer_phone !== undefined ? data.customer_phone : current.customer_phone,
+    data.customer_email !== undefined ? data.customer_email : current.customer_email,
+    data.shipping_address !== undefined ? data.shipping_address : current.shipping_address,
+    items,
+    subtotal,
+    discount,
+    total,
+    data.payment_status !== undefined ? data.payment_status : current.payment_status,
+    data.order_status !== undefined ? data.order_status : current.order_status,
+    data.source !== undefined ? data.source : current.source,
+    data.notes !== undefined ? data.notes : current.notes,
+    id
+  ]);
+
+  await logAudit('UPDATE_ORDER', `Updated order ${current.order_number} (status: ${data.order_status || current.order_status})`);
+  await bumpVersion();
+  const row = await queryOne(`SELECT * FROM orders WHERE id = ?`, [id]);
+  return { ...row, items: parseJsonArray(row.items) };
+}
+
+export async function deleteOrder(id) {
+  await ensureInitialized();
+  const current = await queryOne(`SELECT order_number FROM orders WHERE id = ?`, [id]);
+  if (!current) return false;
+  await execute(`DELETE FROM orders WHERE id = ?`, [id]);
+  await logAudit('DELETE_ORDER', `Deleted order ${current.order_number} (${id})`);
+  await bumpVersion();
+  return true;
+}
+
+// -------------------------------------------------------------
+// Customers CRUD
+// -------------------------------------------------------------
+export async function getCustomers(options = {}) {
+  await ensureInitialized();
+  const { search } = options;
+  let where = '';
+  const params = [];
+
+  if (search && search.trim()) {
+    const q = `%${search.trim().toLowerCase()}%`;
+    where = 'WHERE LOWER(c.name) LIKE ? OR LOWER(c.phone) LIKE ? OR LOWER(c.email) LIKE ? OR LOWER(c.city) LIKE ?';
+    params.push(q, q, q, q);
+  }
+
+  const rows = await queryAll(`
+    SELECT
+      c.*,
+      COUNT(o.id) as total_orders,
+      COALESCE(SUM(CASE WHEN o.order_status != 'cancelled' THEN o.total_amount ELSE 0 END), 0) as total_spent
+    FROM customers c
+    LEFT JOIN orders o ON (o.customer_id = c.id OR (o.customer_phone != '' AND o.customer_phone = c.phone))
+    ${where}
+    GROUP BY c.id
+    ORDER BY c.created_at DESC
+  `, params);
+
+  return rows.map(r => ({
+    ...r,
+    total_orders: Number(r.total_orders) || 0,
+    total_spent: Number(r.total_spent) || 0
+  }));
+}
+
+export async function createCustomer(data) {
+  await ensureInitialized();
+  const id = data.id || `cust_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
+  await execute(`
+    INSERT INTO customers (id, name, phone, email, address, city, notes, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    id,
+    String(data.name || '').trim(),
+    data.phone || '',
+    data.email || '',
+    data.address || '',
+    data.city || '',
+    data.notes || '',
+    data.status || 'active'
+  ]);
+  await logAudit('CREATE_CUSTOMER', `Added customer ${data.name}`);
+  return await queryOne(`SELECT * FROM customers WHERE id = ?`, [id]);
+}
+
+export async function updateCustomer(id, data) {
+  await ensureInitialized();
+  const current = await queryOne(`SELECT * FROM customers WHERE id = ?`, [id]);
+  if (!current) return null;
+
+  await execute(`
+    UPDATE customers SET
+      name = ?, phone = ?, email = ?, address = ?, city = ?, notes = ?, status = ?, updated_at = datetime('now')
+    WHERE id = ?
+  `, [
+    data.name !== undefined ? String(data.name).trim() : current.name,
+    data.phone !== undefined ? data.phone : current.phone,
+    data.email !== undefined ? data.email : current.email,
+    data.address !== undefined ? data.address : current.address,
+    data.city !== undefined ? data.city : current.city,
+    data.notes !== undefined ? data.notes : current.notes,
+    data.status !== undefined ? data.status : current.status,
+    id
+  ]);
+  await logAudit('UPDATE_CUSTOMER', `Updated customer ${data.name || current.name}`);
+  return await queryOne(`SELECT * FROM customers WHERE id = ?`, [id]);
+}
+
+export async function deleteCustomer(id) {
+  await ensureInitialized();
+  const current = await queryOne(`SELECT name FROM customers WHERE id = ?`, [id]);
+  if (!current) return false;
+  await execute(`DELETE FROM customers WHERE id = ?`, [id]);
+  await logAudit('DELETE_CUSTOMER', `Deleted customer ${current.name} (${id})`);
+  return true;
+}
+
+// -------------------------------------------------------------
+// Banners & Store Settings CRUD
+// -------------------------------------------------------------
+export async function getBanners(onlyActive = false) {
+  await ensureInitialized();
+  const where = onlyActive ? 'WHERE active = 1' : '';
+  const rows = await queryAll(`SELECT * FROM banners ${where} ORDER BY display_order ASC, created_at DESC`);
+  return rows.map(r => ({
+    ...r,
+    active: Boolean(r.active),
+    display_order: Number(r.display_order) || 0
+  }));
+}
+
+export async function createBanner(data) {
+  await ensureInitialized();
+  const id = data.id || `ban_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
+  await execute(`
+    INSERT INTO banners (id, title, subtitle, badge_text, image_url, link_url, position, active, display_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    id,
+    String(data.title || '').trim(),
+    data.subtitle || '',
+    data.badge_text || '',
+    data.image_url || '',
+    data.link_url || '',
+    data.position || 'promo',
+    data.active !== undefined ? (data.active ? 1 : 0) : 1,
+    Number(data.display_order) || 0
+  ]);
+  await logAudit('CREATE_BANNER', `Created promotional banner "${data.title}"`);
+  await bumpVersion();
+  const row = await queryOne(`SELECT * FROM banners WHERE id = ?`, [id]);
+  return { ...row, active: Boolean(row.active) };
+}
+
+export async function updateBanner(id, data) {
+  await ensureInitialized();
+  const current = await queryOne(`SELECT * FROM banners WHERE id = ?`, [id]);
+  if (!current) return null;
+
+  await execute(`
+    UPDATE banners SET
+      title = ?, subtitle = ?, badge_text = ?, image_url = ?, link_url = ?,
+      position = ?, active = ?, display_order = ?, updated_at = datetime('now')
+    WHERE id = ?
+  `, [
+    data.title !== undefined ? String(data.title).trim() : current.title,
+    data.subtitle !== undefined ? data.subtitle : current.subtitle,
+    data.badge_text !== undefined ? data.badge_text : current.badge_text,
+    data.image_url !== undefined ? data.image_url : current.image_url,
+    data.link_url !== undefined ? data.link_url : current.link_url,
+    data.position !== undefined ? data.position : current.position,
+    data.active !== undefined ? (data.active ? 1 : 0) : current.active,
+    data.display_order !== undefined ? Number(data.display_order) : current.display_order,
+    id
+  ]);
+  await logAudit('UPDATE_BANNER', `Updated promotional banner ${id}`);
+  await bumpVersion();
+  const row = await queryOne(`SELECT * FROM banners WHERE id = ?`, [id]);
+  return { ...row, active: Boolean(row.active) };
+}
+
+export async function deleteBanner(id) {
+  await ensureInitialized();
+  const current = await queryOne(`SELECT title FROM banners WHERE id = ?`, [id]);
+  if (!current) return false;
+  await execute(`DELETE FROM banners WHERE id = ?`, [id]);
+  await logAudit('DELETE_BANNER', `Deleted banner "${current.title}"`);
+  await bumpVersion();
+  return true;
+}
+
+export async function getStoreSettings() {
+  await ensureInitialized();
+  const rows = await queryAll(`SELECT key, value FROM settings WHERE key NOT IN ('session_secret')`);
+  const map = {};
+  for (const r of rows) map[r.key] = r.value;
+  return map;
+}
+
+export async function updateStoreSettings(updates) {
+  await ensureInitialized();
+  const allowedKeys = [
+    'store_name',
+    'whatsapp_number',
+    'promo_notice',
+    'instagram_url',
+    'dispatch_notice',
+    'maintenance_mode'
+  ];
+  const statements = [];
+  for (const k of allowedKeys) {
+    if (updates[k] !== undefined) {
+      statements.push({
+        sql: `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?`,
+        args: [k, String(updates[k]), String(updates[k])]
+      });
+    }
+  }
+  if (statements.length > 0) {
+    await execStatements(statements);
+    await logAudit('UPDATE_SETTINGS', `Updated store settings (${Object.keys(updates).join(', ')})`);
+    await bumpVersion();
+  }
+  return await getStoreSettings();
+}
+
+// -------------------------------------------------------------
+// Dashboard Metrics, Audit Logs & Full Backup Export
+// -------------------------------------------------------------
+export async function getDashboardStats() {
+  await ensureInitialized();
+  const [
+    totalRow,
+    allTotalRow,
+    accRow,
+    cloRow,
+    availRow,
+    soldOutRow,
+    hiddenRow,
+    catsRow,
+    ordersRow,
+    customersRow,
+    revenueRow
+  ] = await Promise.all([
+    queryOne(`SELECT COUNT(*) as count FROM products WHERE status NOT IN ('hidden', 'inactive')`),
+    queryOne(`SELECT COUNT(*) as count FROM products`),
+    queryOne(`SELECT COUNT(*) as count FROM products WHERE section = 'accessories' AND status NOT IN ('hidden', 'inactive')`),
+    queryOne(`SELECT COUNT(*) as count FROM products WHERE section = 'clothing' AND status NOT IN ('hidden', 'inactive')`),
+    queryOne(`SELECT COUNT(*) as count FROM products WHERE status IN ('available', 'active') AND stock > 0`),
+    queryOne(`SELECT COUNT(*) as count FROM products WHERE (status = 'sold_out' OR stock <= 0) AND status NOT IN ('hidden', 'inactive')`),
+    queryOne(`SELECT COUNT(*) as count FROM products WHERE status IN ('hidden', 'inactive')`),
+    queryOne(`SELECT COUNT(*) as count FROM categories`),
+    queryOne(`SELECT COUNT(*) as count FROM orders`),
+    queryOne(`SELECT COUNT(*) as count FROM customers`),
+    queryOne(`SELECT COALESCE(SUM(total_amount), 0) as sum FROM orders WHERE order_status != 'cancelled'`)
+  ]);
+
+  const recentRows = await queryAll(`
     SELECT id, name, section, category, price, comparePrice, status, stock, images, created_at
     FROM products
     ORDER BY created_at DESC, id DESC
     LIMIT 6
-  `).all().map(r => ({
-    ...r,
-    section: r.section || 'accessories',
-    images: JSON.parse(r.images || '[]')
-  }));
+  `);
 
-  const categoryBreakdown = db.prepare(`
+  const categoryBreakdown = await queryAll(`
     SELECT category, section, COUNT(*) as count
     FROM products
     GROUP BY category, section
     ORDER BY count DESC
-  `).all();
+  `);
+
+  const version = await getDbVersion();
 
   return {
-    total,
-    accessoriesTotal,
-    clothingTotal,
-    available,
-    soldOut,
-    hidden,
-    categoriesCount,
-    recent,
+    total: Number(totalRow?.count || 0),
+    allTotal: Number(allTotalRow?.count || 0),
+    accessoriesTotal: Number(accRow?.count || 0),
+    clothingTotal: Number(cloRow?.count || 0),
+    available: Number(availRow?.count || 0),
+    soldOut: Number(soldOutRow?.count || 0),
+    hidden: Number(hiddenRow?.count || 0),
+    categoriesCount: Number(catsRow?.count || 0),
+    ordersCount: Number(ordersRow?.count || 0),
+    customersCount: Number(customersRow?.count || 0),
+    totalRevenue: Number(revenueRow?.sum || 0),
+    recent: recentRows.map(r => ({
+      ...r,
+      section: r.section || 'accessories',
+      status: normalizeProductStatus(r.status),
+      images: parseJsonArray(r.images)
+    })),
     categoryBreakdown,
-    dbVersion: currentVersion
+    dbVersion: version,
+    dbMode
   };
 }
 
-export function verifyAdminCredentials(username, password) {
-  const user = db.prepare(`SELECT * FROM admin_users WHERE username = ?`).get(username);
-  if (!user) return false;
-  return verifyPassword(password, user.password_hash, user.salt);
-}
-
-export function logAudit(action, details) {
+export async function logAudit(action, details) {
   try {
-    db.prepare(`INSERT INTO audit_logs (action, details) VALUES (?, ?)`).run(action, details);
+    await execute(`INSERT INTO audit_logs (action, details) VALUES (?, ?)`, [action, details]);
   } catch (err) {
     console.error('Audit log error:', err);
   }
 }
 
-export function getAuditLogs(limit = 50) {
-  return db.prepare(`SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT ?`).all(limit);
+export async function getAuditLogs(limit = 50) {
+  await ensureInitialized();
+  return await queryAll(`SELECT * FROM audit_logs ORDER BY id DESC, timestamp DESC LIMIT ?`, [Number(limit)]);
 }
 
-export function addCategory(data) {
-  const id = data.id || data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  const slug = data.slug || id;
-  const section = (data.section === 'clothing') ? 'clothing' : 'accessories';
-  const stmt = db.prepare(`
-    INSERT INTO categories (id, name, slug, section, display_order, description, image)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  stmt.run(id, data.name, slug, section, data.display_order || 99, data.description || '', data.image || '');
-  bumpVersion();
-  return { id, name: data.name, slug, section };
+export async function exportFullBackup() {
+  await ensureInitialized();
+  const [products, categories, orders, customers, banners, settings] = await Promise.all([
+    queryAll(`SELECT * FROM products ORDER BY created_at DESC`),
+    queryAll(`SELECT * FROM categories ORDER BY display_order ASC`),
+    queryAll(`SELECT * FROM orders ORDER BY created_at DESC`),
+    queryAll(`SELECT * FROM customers ORDER BY created_at DESC`),
+    queryAll(`SELECT * FROM banners ORDER BY display_order ASC`),
+    getStoreSettings()
+  ]);
+
+  return {
+    timestamp: new Date().toISOString(),
+    dbMode,
+    totalProducts: products.length,
+    totalCategories: categories.length,
+    totalOrders: orders.length,
+    totalCustomers: customers.length,
+    categories,
+    products: products.map(formatProductRow),
+    orders: orders.map(o => ({ ...o, items: parseJsonArray(o.items) })),
+    customers,
+    banners,
+    settings
+  };
 }
 
-export function deleteCategory(id) {
-  const res = db.prepare(`DELETE FROM categories WHERE id = ?`).run(id);
-  if (res.changes > 0) {
-    bumpVersion();
-    return true;
-  }
-  return false;
-}
-
-export { currentVersion, getDbVersion, bumpVersion };
-
+export { currentVersion };

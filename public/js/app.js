@@ -308,11 +308,19 @@ Please provide more details about availability and ordering.`;
       const json = await res.json();
 
       if (json.success && Array.isArray(json.data)) {
+        const prevVersion = currentDbVersion;
         allProducts = json.data;
         currentDbVersion = json.dbVersion;
         renderProductsGrid(allProducts);
 
-        if (silent) {
+        // Keep open search modal results in sync with live catalogue updates
+        if (el.searchModal && el.searchModal.classList.contains('open') && el.searchInput && el.searchInput.value.trim()) {
+          if (typeof renderSearchResults === 'function') {
+            renderSearchResults(el.searchInput.value);
+          }
+        }
+
+        if (silent && prevVersion !== null && String(prevVersion) !== String(json.dbVersion)) {
           showToast('Live catalogue synchronized');
         }
 
@@ -628,10 +636,13 @@ Please provide more details about availability and ordering.`;
 
   function renderPdpContent(p) {
     if (!el.pdpTitle) return;
+    activeProduct = p;
 
     el.pdpCategory.textContent = `// ${p.category.toUpperCase()}`;
     el.pdpTitle.textContent = p.name;
     el.pdpPrice.textContent = `₹${Number(p.price).toLocaleString('en-IN')}`;
+    if (el.stickyTitle) el.stickyTitle.textContent = p.name;
+    if (el.stickyPrice) el.stickyPrice.textContent = `₹${Number(p.price).toLocaleString('en-IN')}`;
 
     if (p.comparePrice && p.comparePrice > p.price) {
       el.pdpMrp.textContent = `₹${Number(p.comparePrice).toLocaleString('en-IN')}`;
@@ -785,46 +796,96 @@ Please provide more details about availability and ordering.`;
   // REAL-TIME GLOBAL SYNCHRONIZATION ENGINE
   // -------------------------------------------------------------
   function initRealtimeSync() {
-    // 1. Server-Sent Events (SSE) Stream
+    let isSyncing = false;
+    let isCheckingVersion = false;
+    let sseFailures = 0;
+
+    async function handleVersionUpdate(incomingVersion) {
+      if (!incomingVersion) return;
+      if (currentDbVersion === null) {
+        if (!isSyncing) {
+          isSyncing = true;
+          try {
+            await Promise.all([fetchCategories(), fetchProducts(false)]);
+          } finally {
+            isSyncing = false;
+          }
+        }
+        return;
+      }
+
+      if (String(incomingVersion) !== String(currentDbVersion) && !isSyncing) {
+        isSyncing = true;
+        try {
+          await fetchCategories();
+          await fetchProducts(true);
+        } finally {
+          isSyncing = false;
+        }
+      }
+    }
+
+    async function checkVersionSync() {
+      if (isCheckingVersion || isSyncing) return;
+      isCheckingVersion = true;
+      try {
+        const res = await fetch(`${API_BASE}/version?t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        await handleVersionUpdate(data.dbVersion);
+      } catch (e) {
+        // network silent
+      } finally {
+        isCheckingVersion = false;
+      }
+    }
+
+    // 1. Server-Sent Events (SSE) Stream for immediate local push & serverless heartbeat
     if (window.EventSource) {
       try {
         sseSource = new EventSource('/api/events');
 
+        sseSource.addEventListener('open', () => {
+          sseFailures = 0;
+        });
+
         sseSource.addEventListener('catalog_update', (event) => {
+          sseFailures = 0;
           try {
             const data = JSON.parse(event.data);
-            if (data.version && data.version !== currentDbVersion) {
-              fetchProducts(true);
-              fetchCategories();
-            }
+            handleVersionUpdate(data.version || data.dbVersion);
           } catch (e) {
             console.error('Error handling SSE message:', e);
           }
         });
 
         sseSource.onerror = () => {
-          // Fallback to polling if SSE drops on mobile or Instagram browser
-          sseSource.close();
-          sseSource = null;
+          sseFailures += 1;
+          // Close only after consecutive real connection failures so serverless short-lived SSE stays clean
+          if (sseFailures >= 4 && sseSource) {
+            sseSource.close();
+            sseSource = null;
+          }
         };
       } catch (err) {
         console.warn('SSE connection failed, falling back to background polling');
       }
     }
 
-    // 2. Periodic background version poll every 10 seconds
-    setInterval(async () => {
-      try {
-        const res = await fetch(`${API_BASE}/version?t=${Date.now()}`);
-        const data = await res.json();
-        if (data.dbVersion && currentDbVersion && data.dbVersion > currentDbVersion) {
-          fetchProducts(true);
-          fetchCategories();
-        }
-      } catch (e) {
-        // network silent
+    // 2. Fast background version polling (ensures near-instant sync across mobile/serverless)
+    setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        checkVersionSync();
       }
-    }, 10000);
+    }, 3500);
+
+    // 3. Sync immediately when shopper returns to the browser tab
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkVersionSync();
+      }
+    });
+    window.addEventListener('focus', checkVersionSync);
   }
 
   // -------------------------------------------------------------
