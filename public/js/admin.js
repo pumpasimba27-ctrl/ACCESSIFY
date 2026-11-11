@@ -9,8 +9,8 @@
     'data:image/svg+xml;utf8,' +
     encodeURIComponent(
       '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">' +
-        '<rect width="120" height="120" fill="#18181d"/>' +
-        '<text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" fill="#71717a" font-family="sans-serif" font-size="11">NO IMAGE</text>' +
+      '<rect width="120" height="120" fill="#18181d"/>' +
+      '<text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" fill="#71717a" font-family="sans-serif" font-size="11">NO IMAGE</text>' +
       '</svg>'
     );
 
@@ -300,7 +300,7 @@
           if (data.type && data.type !== 'connected' && data.type !== 'sync') {
             loadDashboard();
           }
-        } catch (_) {}
+        } catch (_) { }
       });
 
       source.onerror = () => {
@@ -310,7 +310,7 @@
           state.sseSource = null;
         }
       };
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // =========================================================================
@@ -383,6 +383,9 @@
       state.categories = res.data || [];
       $('count-categories').textContent = state.categories.length;
       syncFilterCategoryOptions();
+      if (!$('product-modal').classList.contains('hidden')) {
+        syncProductModalCategoryOptions($('prod-category')?.value || '');
+      }
       renderCategoriesGrid();
     } catch (err) {
       showToast(err.message || 'Failed to load categories', 'error');
@@ -681,7 +684,7 @@
   // =========================================================================
   // PRODUCT ADD / EDIT MODAL + MULTI-IMAGE UPLOAD ENGINE
   // =========================================================================
-  function openProductModal(product = null) {
+  async function openProductModal(product = null) {
     $('prod-form-error').classList.add('hidden');
     $('prod-upload-status').textContent = '';
     $('prod-upload').value = '';
@@ -692,6 +695,9 @@
     $('prod-sku').value = product ? product.sku_code || '' : '';
     $('prod-section').value = product ? product.section || 'accessories' : 'accessories';
 
+    if (!state.categories.length) {
+      await loadCategories();
+    }
     syncProductModalCategoryOptions(product ? product.category : '');
 
     $('prod-price').value = product ? Number(product.price) : '';
@@ -944,15 +950,15 @@
         <td>
           <select class="form-control" style="padding:5px 8px;font-size:12px;" data-order-pay="${escapeHtml(o.id)}">
             ${payStatuses
-              .map((ps) => `<option value="${ps}" ${o.payment_status === ps ? 'selected' : ''}>${ps.toUpperCase()}</option>`)
-              .join('')}
+            .map((ps) => `<option value="${ps}" ${o.payment_status === ps ? 'selected' : ''}>${ps.toUpperCase()}</option>`)
+            .join('')}
           </select>
         </td>
         <td>
           <select class="form-control" style="padding:5px 8px;font-size:12px;" data-order-stat="${escapeHtml(o.id)}">
             ${orderStatuses
-              .map((os) => `<option value="${os}" ${o.order_status === os ? 'selected' : ''}>${os.toUpperCase()}</option>`)
-              .join('')}
+            .map((os) => `<option value="${os}" ${o.order_status === os ? 'selected' : ''}>${os.toUpperCase()}</option>`)
+            .join('')}
           </select>
         </td>
         <td>
