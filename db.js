@@ -893,7 +893,7 @@ export async function getProducts(options = {}) {
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-  let orderBy = "ORDER BY featured DESC, newArrival DESC, created_at DESC, id DESC";
+  let orderBy = "ORDER BY created_at DESC, newArrival DESC, id DESC";
   if (sort === 'price_asc') {
     orderBy = "ORDER BY price ASC";
   } else if (sort === 'price_desc') {

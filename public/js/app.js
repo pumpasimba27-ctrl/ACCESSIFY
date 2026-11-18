@@ -312,12 +312,20 @@ Please provide more details about availability and ordering.`;
     } else if (currentSort === 'price_desc') {
       list.sort((a, b) => Number(b.price) - Number(a.price));
     } else if (currentSort === 'newest') {
-      list.sort((a, b) => (b.newArrival ? 1 : 0) - (a.newArrival ? 1 : 0) || (b.id > a.id ? 1 : -1));
+      list.sort((a, b) => {
+        const timeA = new Date(a.created_at || 0).getTime();
+        const timeB = new Date(b.created_at || 0).getTime();
+        if (timeA !== timeB) return timeB - timeA;
+        return (b.id || '').localeCompare(a.id || '');
+      });
     } else {
       list.sort((a, b) => {
-        if (Boolean(b.featured) !== Boolean(a.featured)) return b.featured ? 1 : -1;
+        const timeA = new Date(a.created_at || 0).getTime();
+        const timeB = new Date(b.created_at || 0).getTime();
+        if (timeA !== timeB) return timeB - timeA;
         if (Boolean(b.newArrival) !== Boolean(a.newArrival)) return b.newArrival ? 1 : -1;
-        return b.id > a.id ? 1 : -1;
+        if (Boolean(b.featured) !== Boolean(a.featured)) return b.featured ? 1 : -1;
+        return (b.id || '').localeCompare(a.id || '');
       });
     }
     return list;
