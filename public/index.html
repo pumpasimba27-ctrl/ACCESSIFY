@@ -817,13 +817,14 @@
 
   <!-- Global Header Category Helper -->
   <script>
-    window.setStoreCategory = function (cat) {
-      const pill = document.querySelecer -}"]`);
-    if (pill) {
-      pill.click();
+    if (!window.setStoreCategory) {
+      window.setStoreCategory = function (cat) {
+        const pill = document.querySelector(`[data-cat="${cat}"]`);
+        if (pill) pill.click();
+        const target = document.getElementById('catalog');
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+      };
     }
-    const target = document.getElementById('catalog');
-    if (target) target.scrollIntoView({ behavior: 'smooth' });
   </script>
 </body>
 
