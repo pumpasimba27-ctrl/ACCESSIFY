@@ -66,12 +66,12 @@ const TMP_UPLOADS = path.join('/tmp', 'uploads');
 if (isVercel) {
   try {
     if (!fs.existsSync(TMP_UPLOADS)) fs.mkdirSync(TMP_UPLOADS, { recursive: true });
-  } catch (_) {}
+  } catch (_) { }
 } else {
   try {
     if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR, { recursive: true });
-  } catch (_) {}
+  } catch (_) { }
 }
 
 // Connected SSE Clients for Instant Global Sync (Persistent local server mode)
@@ -858,16 +858,21 @@ app.post('/api/admin/upload', requireAdmin, (req, res, next) => {
     let finalMime = file.mimetype;
 
     try {
-      // Auto-orient and compress all uploaded images with sharp
-      const transformer = sharp(file.buffer).rotate().resize({ width: 1400, withoutEnlargement: true });
-      if (ext === '.png') {
-        finalBuffer = await transformer.png({ quality: 80, compressionLevel: 9, palette: true }).toBuffer();
-        finalMime = 'image/png';
-      } else if (ext === '.webp') {
+      // Auto-orient and aggressively optimize all uploaded images with sharp (<250KB each)
+      const transformer = sharp(file.buffer).rotate().resize({ width: 1200, withoutEnlargement: true });
+      if (ext === '.webp') {
+        finalBuffer = await transformer.webp({ quality: 80 }).toBuffer();
+        finalMime = 'image/webp';
+      } else if (ext === '.png' && file.buffer.length > 500 * 1024) {
+        // High-res mobile PNGs: compress to optimized webp to prevent Blob quota exhaustion
         finalBuffer = await transformer.webp({ quality: 82 }).toBuffer();
         finalMime = 'image/webp';
+        safeName = safeName.replace(/\.png$/i, '.webp');
+      } else if (ext === '.png') {
+        finalBuffer = await transformer.png({ quality: 80, compressionLevel: 9, palette: true }).toBuffer();
+        finalMime = 'image/png';
       } else {
-        finalBuffer = await transformer.jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+        finalBuffer = await transformer.jpeg({ quality: 80, mozjpeg: true }).toBuffer();
         finalMime = 'image/jpeg';
       }
     } catch (sharpErr) {
@@ -875,19 +880,27 @@ app.post('/api/admin/upload', requireAdmin, (req, res, next) => {
       finalBuffer = file.buffer;
     }
 
+    let uploadedUrl = null;
     if (blobToken) {
-      const blob = await putVercelBlob(`uploads/${safeName}`, finalBuffer, {
-        access: 'public',
-        contentType: finalMime,
-        token: blobToken
-      });
-      urls.push(blob.url);
-    } else {
+      try {
+        const blob = await putVercelBlob(`uploads/${safeName}`, finalBuffer, {
+          access: 'public',
+          contentType: finalMime,
+          token: blobToken
+        });
+        uploadedUrl = blob.url;
+      } catch (blobErr) {
+        console.warn('Vercel blob upload failed/suspended, falling back to disk:', blobErr.message);
+      }
+    }
+
+    if (!uploadedUrl) {
       const targetDir = isVercel ? TMP_UPLOADS : UPLOADS_DIR;
       if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
       fs.writeFileSync(path.join(targetDir, safeName), finalBuffer);
-      urls.push(`/uploads/${safeName}`);
+      uploadedUrl = `/uploads/${safeName}`;
     }
+    urls.push(uploadedUrl);
   }
 
   res.json({

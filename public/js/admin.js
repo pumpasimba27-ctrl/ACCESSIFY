@@ -87,12 +87,19 @@
     const m = $(modalId);
     if (!m) return;
     m.classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    const body = m.querySelector('.modal-body');
+    if (body) body.scrollTop = 0;
   }
 
   function closeModal(modalId) {
     const m = $(modalId);
     if (!m) return;
     m.classList.add('hidden');
+    const anyOpen = document.querySelectorAll('.modal-backdrop:not(.hidden)');
+    if (anyOpen.length === 0) {
+      document.body.classList.remove('modal-open');
+    }
   }
 
   function openConfirm({ title = 'Confirm Action', message, confirmText = 'Delete Permanently', onConfirm }) {
@@ -1933,8 +1940,8 @@
     document.addEventListener('wheel', (e) => {
       const target = e.target;
       if (target && target.tagName === 'TEXTAREA' && target.closest('.modal-body')) {
-        const isScrollable = target.scrollHeight > target.clientHeight;
-        if (!isScrollable) {
+        const isScrollable = (target.scrollHeight - target.clientHeight) > 8;
+        if (!isScrollable || (target.scrollTop === 0 && e.deltaY < 0) || (target.scrollTop + target.clientHeight >= target.scrollHeight && e.deltaY > 0)) {
           const modalBody = target.closest('.modal-body');
           if (modalBody) {
             modalBody.scrollTop += e.deltaY;
