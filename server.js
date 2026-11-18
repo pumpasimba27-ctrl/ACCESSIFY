@@ -6,6 +6,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import sharp from 'sharp';
 import { put as putVercelBlob } from '@vercel/blob';
 import {
   ensureInitialized,
@@ -189,14 +190,33 @@ app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
-// Static Assets
+// Static Assets with Edge & Browser Caching Options
+const staticImgOptions = {
+  maxAge: '30d',
+  immutable: true,
+  setHeaders: (res, filePath) => {
+    if (/\.(webp|png|jpe?g|gif|avif|svg|ico)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+    }
+  }
+};
+
+const uploadsStaticOptions = {
+  maxAge: '7d',
+  setHeaders: (res, filePath) => {
+    if (/\.(webp|png|jpe?g|gif|avif|svg)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+    }
+  }
+};
+
 if (isVercel) {
-  app.use('/uploads', express.static(TMP_UPLOADS));
+  app.use('/uploads', express.static(TMP_UPLOADS, uploadsStaticOptions));
 }
-app.use('/uploads', express.static(UPLOADS_DIR));
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-app.use(express.static(PUBLIC_DIR));
-app.use(express.static(path.join(process.cwd(), 'public')));
+app.use('/uploads', express.static(UPLOADS_DIR, uploadsStaticOptions));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), uploadsStaticOptions));
+app.use(express.static(PUBLIC_DIR, staticImgOptions));
+app.use(express.static(path.join(process.cwd(), 'public'), staticImgOptions));
 
 // CRITICAL CACHE CONTROL: Prevent stale catalog data across mobile browsers & proxies
 app.use('/api', async (req, res, next) => {
@@ -834,17 +854,38 @@ app.post('/api/admin/upload', requireAdmin, (req, res, next) => {
     const ext = path.extname(file.originalname || '').toLowerCase() || '.jpg';
     const safeName = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`;
 
+    let finalBuffer = file.buffer;
+    let finalMime = file.mimetype;
+
+    try {
+      // Auto-orient and compress all uploaded images with sharp
+      const transformer = sharp(file.buffer).rotate().resize({ width: 1400, withoutEnlargement: true });
+      if (ext === '.png') {
+        finalBuffer = await transformer.png({ quality: 80, compressionLevel: 9, palette: true }).toBuffer();
+        finalMime = 'image/png';
+      } else if (ext === '.webp') {
+        finalBuffer = await transformer.webp({ quality: 82 }).toBuffer();
+        finalMime = 'image/webp';
+      } else {
+        finalBuffer = await transformer.jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+        finalMime = 'image/jpeg';
+      }
+    } catch (sharpErr) {
+      console.warn('Sharp compression warning (fallback to raw buffer):', sharpErr.message);
+      finalBuffer = file.buffer;
+    }
+
     if (blobToken) {
-      const blob = await putVercelBlob(`uploads/${safeName}`, file.buffer, {
+      const blob = await putVercelBlob(`uploads/${safeName}`, finalBuffer, {
         access: 'public',
-        contentType: file.mimetype,
+        contentType: finalMime,
         token: blobToken
       });
       urls.push(blob.url);
     } else {
       const targetDir = isVercel ? TMP_UPLOADS : UPLOADS_DIR;
       if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-      fs.writeFileSync(path.join(targetDir, safeName), file.buffer);
+      fs.writeFileSync(path.join(targetDir, safeName), finalBuffer);
       urls.push(`/uploads/${safeName}`);
     }
   }

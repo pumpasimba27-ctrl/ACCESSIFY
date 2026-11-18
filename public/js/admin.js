@@ -1928,6 +1928,20 @@
       await loadDashboard();
       showToast('Audit logs refreshed', 'info');
     });
+
+    // Prevent desktop mousewheel scroll traps on non-scrollable textareas inside modal
+    document.addEventListener('wheel', (e) => {
+      const target = e.target;
+      if (target && target.tagName === 'TEXTAREA' && target.closest('.modal-body')) {
+        const isScrollable = target.scrollHeight > target.clientHeight;
+        if (!isScrollable) {
+          const modalBody = target.closest('.modal-body');
+          if (modalBody) {
+            modalBody.scrollTop += e.deltaY;
+          }
+        }
+      }
+    }, { passive: true });
   }
 
   // Boot

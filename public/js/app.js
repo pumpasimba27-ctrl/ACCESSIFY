@@ -289,19 +289,44 @@ Please provide more details about availability and ordering.`;
     });
   }
 
+  const FALLBACK_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 533' fill='%23050505'%3E%3Crect width='400' height='533' fill='%23050505'/%3E%3Ctext x='50%25' y='50%25' fill='%23555' font-family='sans-serif' font-size='13' letter-spacing='2' text-anchor='middle' dominant-baseline='middle'%3EACCESSIFY%3C/text%3E%3C/svg%3E";
+
+  function getFilteredAndSortedProducts() {
+    let list = allProducts.slice();
+    if (currentCategory && currentCategory !== 'all') {
+      const catLower = currentCategory.toLowerCase();
+      list = list.filter(p => (p.category || '').toLowerCase() === catLower);
+    }
+    if (currentSearchQuery) {
+      const q = currentSearchQuery.trim().toLowerCase();
+      list = list.filter(p => {
+        const n = (p.name || '').toLowerCase();
+        const c = (p.category || '').toLowerCase();
+        const d = (p.description || '').toLowerCase();
+        return n.includes(q) || c.includes(q) || d.includes(q);
+      });
+    }
+
+    if (currentSort === 'price_asc') {
+      list.sort((a, b) => Number(a.price) - Number(b.price));
+    } else if (currentSort === 'price_desc') {
+      list.sort((a, b) => Number(b.price) - Number(a.price));
+    } else if (currentSort === 'newest') {
+      list.sort((a, b) => (b.newArrival ? 1 : 0) - (a.newArrival ? 1 : 0) || (b.id > a.id ? 1 : -1));
+    } else {
+      list.sort((a, b) => {
+        if (Boolean(b.featured) !== Boolean(a.featured)) return b.featured ? 1 : -1;
+        if (Boolean(b.newArrival) !== Boolean(a.newArrival)) return b.newArrival ? 1 : -1;
+        return b.id > a.id ? 1 : -1;
+      });
+    }
+    return list;
+  }
+
   async function fetchProducts(silent = false) {
     try {
       const params = new URLSearchParams();
       params.append('section', currentSection);
-      if (currentCategory && currentCategory !== 'all') {
-        params.append('category', currentCategory);
-      }
-      if (currentSort && currentSort !== 'default') {
-        params.append('sort', currentSort);
-      }
-      if (currentSearchQuery) {
-        params.append('search', currentSearchQuery);
-      }
       params.append('t', Date.now());
 
       const res = await fetch(`${API_BASE}/products?${params.toString()}`);
@@ -311,7 +336,7 @@ Please provide more details about availability and ordering.`;
         const prevVersion = currentDbVersion;
         allProducts = json.data;
         currentDbVersion = json.dbVersion;
-        renderProductsGrid(allProducts);
+        renderProductsGrid(getFilteredAndSortedProducts());
 
         // Keep open search modal results in sync with live catalogue updates
         if (el.searchModal && el.searchModal.classList.contains('open') && el.searchInput && el.searchInput.value.trim()) {
@@ -409,7 +434,11 @@ Please provide more details about availability and ordering.`;
     renderHeaderNav();
     renderCategoryPills();
     renderMobileCategories();
-    fetchProducts();
+    if (allProducts && allProducts.length > 0) {
+      renderProductsGrid(getFilteredAndSortedProducts());
+    } else {
+      fetchProducts();
+    }
     scrollToCatalog();
   }
 
@@ -426,8 +455,12 @@ Please provide more details about availability and ordering.`;
   // -------------------------------------------------------------
   // PRODUCTS GRID RENDERING (GENRAGE STYLE)
   // -------------------------------------------------------------
+  const BATCH_SIZE = 24;
+  let renderToken = 0;
+
   function renderProductsGrid(products) {
     if (!el.productsGrid) return;
+    const currentToken = ++renderToken;
 
     if (el.catalogCount) {
       if (currentSection === 'clothing' && products.length === 0) {
@@ -484,27 +517,69 @@ Please provide more details about availability and ordering.`;
           currentSearchQuery = '';
           renderHeaderNav();
           renderCategoryPills();
-          fetchProducts();
+          renderProductsGrid(getFilteredAndSortedProducts());
         });
       }
       return;
     }
 
+    // Render first batch immediately (<20ms FCP/LCP)
+    const initialBatch = products.slice(0, BATCH_SIZE);
     let cardsHtml = '';
-    products.forEach(p => {
-      cardsHtml += createProductCardHtml(p);
+    initialBatch.forEach((p, idx) => {
+      cardsHtml += createProductCardHtml(p, idx);
     });
     el.productsGrid.innerHTML = cardsHtml;
     attachCardListeners(el.productsGrid);
+
+    // Render remaining cards in smooth idle callbacks without main thread freeze
+    if (products.length > BATCH_SIZE) {
+      let offset = BATCH_SIZE;
+      function renderNextChunk() {
+        if (currentToken !== renderToken) return;
+        const chunk = products.slice(offset, offset + BATCH_SIZE);
+        if (chunk.length === 0) return;
+
+        const tempContainer = document.createElement('div');
+        let chunkHtml = '';
+        chunk.forEach((p, i) => {
+          chunkHtml += createProductCardHtml(p, offset + i);
+        });
+        tempContainer.innerHTML = chunkHtml;
+
+        const fragment = document.createDocumentFragment();
+        while (tempContainer.firstChild) {
+          fragment.appendChild(tempContainer.firstChild);
+        }
+        el.productsGrid.appendChild(fragment);
+        attachCardListeners(el.productsGrid);
+
+        offset += BATCH_SIZE;
+        if (offset < products.length) {
+          if (window.requestIdleCallback) {
+            window.requestIdleCallback(renderNextChunk, { timeout: 100 });
+          } else {
+            requestAnimationFrame(renderNextChunk);
+          }
+        }
+      }
+
+      if (window.requestIdleCallback) {
+        window.requestIdleCallback(renderNextChunk, { timeout: 80 });
+      } else {
+        requestAnimationFrame(renderNextChunk);
+      }
+    }
   }
 
-  function createProductCardHtml(p) {
+  function createProductCardHtml(p, index = 0) {
     const isSoldOut = p.status === 'sold_out' || (p.stock !== undefined && p.stock <= 0);
     const hasDiscount = p.comparePrice && p.comparePrice > p.price;
     const discountPercent = hasDiscount ? Math.round(((p.comparePrice - p.price) / p.comparePrice) * 100) : 0;
 
     const img1 = (p.images && p.images[0]) || 'https://cdn.zepio.io/blyo/product/ebbe65b3-b81a-448b-a644-09c752b39a3b.webp';
-    const img2 = (p.images && p.images[1]) || img1;
+    const hasSecondary = Array.isArray(p.images) && p.images.length > 1 && p.images[1] && p.images[1] !== img1;
+    const img2 = hasSecondary ? p.images[1] : null;
 
     let badgeHtml = '';
     if (isSoldOut) {
@@ -518,6 +593,15 @@ Please provide more details about availability and ordering.`;
     const priceFormatted = `₹${Number(p.price).toLocaleString('en-IN')}`;
     const mrpFormatted = p.comparePrice ? `₹${Number(p.comparePrice).toLocaleString('en-IN')}` : '';
 
+    const isAboveFold = index < 6;
+    const primaryLoadingAttr = isAboveFold ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"';
+    const fallbackHandler = `onerror="this.onerror=null;this.classList.add('img-fallback');this.src='${FALLBACK_SVG}'"`;
+    const loadHandler = `onload="this.classList.add('is-loaded')"`;
+
+    const secondaryImgHtml = hasSecondary
+      ? `<img src="${escapeHtml(img2)}" alt="${escapeHtml(p.name)}" class="product-img product-img-secondary" loading="lazy" decoding="async" ${loadHandler} ${fallbackHandler}>`
+      : '';
+
     return `
       <article class="product-card" data-id="${p.id}" data-slug="${escapeHtml(p.slug || p.id)}">
         <div class="product-figure">
@@ -525,8 +609,8 @@ Please provide more details about availability and ordering.`;
             ${badgeHtml}
           </div>
           <a href="/?product=${encodeURIComponent(p.slug || p.id)}" class="product-media-link" data-open-pdp="${p.id}">
-            <img src="${escapeHtml(img1)}" alt="${escapeHtml(p.name)}" class="product-img product-img-primary" loading="lazy">
-            <img src="${escapeHtml(img2)}" alt="${escapeHtml(p.name)}" class="product-img product-img-secondary" loading="lazy">
+            <img src="${escapeHtml(img1)}" alt="${escapeHtml(p.name)}" class="product-img product-img-primary" ${primaryLoadingAttr} decoding="async" ${loadHandler} ${fallbackHandler}>
+            ${secondaryImgHtml}
           </a>
         </div>
         <div class="product-info">
@@ -675,13 +759,18 @@ Please provide more details about availability and ordering.`;
 
     // Gallery Images
     const images = Array.isArray(p.images) && p.images.length > 0 ? p.images : ['https://cdn.zepio.io/blyo/product/ebbe65b3-b81a-448b-a644-09c752b39a3b.webp'];
+    el.pdpMainImg.decoding = 'async';
+    el.pdpMainImg.onerror = () => {
+      el.pdpMainImg.onerror = null;
+      el.pdpMainImg.src = FALLBACK_SVG;
+    };
     el.pdpMainImg.src = images[0];
 
     let thumbsHtml = '';
     images.forEach((img, idx) => {
       thumbsHtml += `
         <div class="pdp-thumb ${idx === 0 ? 'active' : ''}" data-thumb-src="${escapeHtml(img)}">
-          <img src="${escapeHtml(img)}" alt="${escapeHtml(p.name)} thumbnail ${idx + 1}">
+          <img src="${escapeHtml(img)}" alt="${escapeHtml(p.name)} thumbnail ${idx + 1}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${FALLBACK_SVG}'">
         </div>
       `;
     });
@@ -950,7 +1039,11 @@ Please provide more details about availability and ordering.`;
     // Category sorting dropdown
     el.sortSelect?.addEventListener('change', (e) => {
       currentSort = e.target.value;
-      fetchProducts();
+      if (allProducts && allProducts.length > 0) {
+        renderProductsGrid(getFilteredAndSortedProducts());
+      } else {
+        fetchProducts();
+      }
     });
 
     // Header Category Nav Links
