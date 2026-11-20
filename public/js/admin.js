@@ -88,6 +88,7 @@
     if (!m) return;
     m.classList.remove('hidden');
     document.body.classList.add('modal-open');
+    m.scrollTop = 0;
     const body = m.querySelector('.modal-body');
     if (body) body.scrollTop = 0;
   }
@@ -1951,64 +1952,6 @@
       descArea.addEventListener('input', resizeDesc);
       descArea.addEventListener('focus', resizeDesc);
     }
-
-    // Seamless mousewheel forwarding for non-scrollable textareas and controls inside modal
-    document.addEventListener('wheel', (e) => {
-      const target = e.target;
-      if (!target || !target.closest) return;
-      const modalBody = target.closest('.modal-body');
-      if (!modalBody) return;
-
-      const textarea = target.closest('textarea');
-      if (textarea) {
-        const canScroll = (textarea.scrollHeight - textarea.clientHeight) > 4;
-        const atTop = textarea.scrollTop <= 0 && e.deltaY < 0;
-        const atBottom = (textarea.scrollTop + textarea.clientHeight >= textarea.scrollHeight - 2) && e.deltaY > 0;
-        if (!canScroll || atTop || atBottom) {
-          modalBody.scrollTop += e.deltaY;
-        }
-      }
-    }, { passive: true });
-
-    // Seamless touch gesture forwarding for mobile devices (including Instagram webview & Android WebView)
-    let touchStartY = 0;
-    let activeModalBody = null;
-    let activeTouchTarget = null;
-
-    document.addEventListener('touchstart', (e) => {
-      const target = e.target;
-      if (!target || !target.closest || !e.touches || !e.touches[0]) return;
-      const modalBody = target.closest('.modal-body');
-      if (!modalBody) return;
-
-      touchStartY = e.touches[0].clientY;
-      activeModalBody = modalBody;
-      activeTouchTarget = target;
-    }, { passive: true });
-
-    document.addEventListener('touchmove', (e) => {
-      if (!activeModalBody || !activeTouchTarget || !e.touches || !e.touches[0]) return;
-      const currentY = e.touches[0].clientY;
-      const deltaY = touchStartY - currentY;
-
-      // When dragging finger over textarea or form elements inside modal:
-      const textarea = activeTouchTarget.closest ? activeTouchTarget.closest('textarea') : null;
-      if (textarea) {
-        const canScroll = (textarea.scrollHeight - textarea.clientHeight) > 4;
-        const atTop = textarea.scrollTop <= 0 && deltaY < 0;
-        const atBottom = (textarea.scrollTop + textarea.clientHeight >= textarea.scrollHeight - 2) && deltaY > 0;
-
-        if (!canScroll || atTop || atBottom) {
-          activeModalBody.scrollTop += deltaY;
-          touchStartY = currentY;
-        }
-      }
-    }, { passive: true });
-
-    document.addEventListener('touchend', () => {
-      activeModalBody = null;
-      activeTouchTarget = null;
-    }, { passive: true });
   }
 
   // Boot

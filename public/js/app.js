@@ -463,12 +463,8 @@ Please provide more details about availability and ordering.`;
   // -------------------------------------------------------------
   // PRODUCTS GRID RENDERING (GENRAGE STYLE)
   // -------------------------------------------------------------
-  const BATCH_SIZE = 24;
-  let renderToken = 0;
-
   function renderProductsGrid(products) {
     if (!el.productsGrid) return;
-    const currentToken = ++renderToken;
 
     if (el.catalogCount) {
       if (currentSection === 'clothing' && products.length === 0) {
@@ -531,63 +527,21 @@ Please provide more details about availability and ordering.`;
       return;
     }
 
-    // Render first batch immediately (<20ms FCP/LCP)
-    const initialBatch = products.slice(0, BATCH_SIZE);
     let cardsHtml = '';
-    initialBatch.forEach((p, idx) => {
-      cardsHtml += createProductCardHtml(p, idx);
+    products.forEach(p => {
+      cardsHtml += createProductCardHtml(p);
     });
     el.productsGrid.innerHTML = cardsHtml;
     attachCardListeners(el.productsGrid);
-
-    // Render remaining cards in smooth idle callbacks without main thread freeze
-    if (products.length > BATCH_SIZE) {
-      let offset = BATCH_SIZE;
-      function renderNextChunk() {
-        if (currentToken !== renderToken) return;
-        const chunk = products.slice(offset, offset + BATCH_SIZE);
-        if (chunk.length === 0) return;
-
-        const tempContainer = document.createElement('div');
-        let chunkHtml = '';
-        chunk.forEach((p, i) => {
-          chunkHtml += createProductCardHtml(p, offset + i);
-        });
-        tempContainer.innerHTML = chunkHtml;
-
-        const fragment = document.createDocumentFragment();
-        while (tempContainer.firstChild) {
-          fragment.appendChild(tempContainer.firstChild);
-        }
-        el.productsGrid.appendChild(fragment);
-        attachCardListeners(el.productsGrid);
-
-        offset += BATCH_SIZE;
-        if (offset < products.length) {
-          if (window.requestIdleCallback) {
-            window.requestIdleCallback(renderNextChunk, { timeout: 100 });
-          } else {
-            requestAnimationFrame(renderNextChunk);
-          }
-        }
-      }
-
-      if (window.requestIdleCallback) {
-        window.requestIdleCallback(renderNextChunk, { timeout: 80 });
-      } else {
-        requestAnimationFrame(renderNextChunk);
-      }
-    }
   }
 
-  function createProductCardHtml(p, index = 0) {
+  function createProductCardHtml(p) {
     const isSoldOut = p.status === 'sold_out' || (p.stock !== undefined && p.stock <= 0);
     const hasDiscount = p.comparePrice && p.comparePrice > p.price;
     const discountPercent = hasDiscount ? Math.round(((p.comparePrice - p.price) / p.comparePrice) * 100) : 0;
 
     const img1 = (p.images && p.images[0]) || 'https://cdn.zepio.io/blyo/product/ebbe65b3-b81a-448b-a644-09c752b39a3b.webp';
-    const hasSecondary = Array.isArray(p.images) && p.images.length > 1 && p.images[1] && p.images[1] !== img1;
-    const img2 = hasSecondary ? p.images[1] : null;
+    const img2 = (p.images && p.images[1]) || img1;
 
     let badgeHtml = '';
     if (isSoldOut) {
@@ -601,15 +555,6 @@ Please provide more details about availability and ordering.`;
     const priceFormatted = `₹${Number(p.price).toLocaleString('en-IN')}`;
     const mrpFormatted = p.comparePrice ? `₹${Number(p.comparePrice).toLocaleString('en-IN')}` : '';
 
-    const isAboveFold = index < 6;
-    const primaryLoadingAttr = isAboveFold ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"';
-    const fallbackHandler = `onerror="this.onerror=null;this.classList.add('img-fallback');this.src='${FALLBACK_SVG}'"`;
-    const loadHandler = `onload="this.classList.add('is-loaded')"`;
-
-    const secondaryImgHtml = hasSecondary
-      ? `<img src="${escapeHtml(img2)}" alt="${escapeHtml(p.name)}" class="product-img product-img-secondary" loading="lazy" decoding="async" ${loadHandler} ${fallbackHandler}>`
-      : '';
-
     return `
       <article class="product-card" data-id="${p.id}" data-slug="${escapeHtml(p.slug || p.id)}">
         <div class="product-figure">
@@ -617,8 +562,8 @@ Please provide more details about availability and ordering.`;
             ${badgeHtml}
           </div>
           <a href="/?product=${encodeURIComponent(p.slug || p.id)}" class="product-media-link" data-open-pdp="${p.id}">
-            <img src="${escapeHtml(img1)}" alt="${escapeHtml(p.name)}" class="product-img product-img-primary" ${primaryLoadingAttr} decoding="async" ${loadHandler} ${fallbackHandler}>
-            ${secondaryImgHtml}
+            <img src="${escapeHtml(img1)}" alt="${escapeHtml(p.name)}" class="product-img product-img-primary" loading="lazy">
+            <img src="${escapeHtml(img2)}" alt="${escapeHtml(p.name)}" class="product-img product-img-secondary" loading="lazy">
           </a>
         </div>
         <div class="product-info">

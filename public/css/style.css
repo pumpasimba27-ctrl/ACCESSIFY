@@ -1183,22 +1183,6 @@ ol {
   overflow: hidden;
 }
 
-.product-figure::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.015) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.015) 100%);
-  background-size: 200% 100%;
-  animation: cardSkeletonShimmer 1.8s infinite linear;
-  pointer-events: none;
-  z-index: 0;
-}
-
-@keyframes cardSkeletonShimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
 .product-media-link {
   display: block;
   width: 100%;
@@ -1214,13 +1198,6 @@ ol {
   height: 100%;
   object-fit: cover;
   transition: opacity 0.35s ease, transform 0.5s ease;
-  background-color: #050505;
-}
-
-.product-img.img-fallback {
-  object-fit: contain;
-  padding: 18px;
-  background-color: #080808;
 }
 
 .product-img-primary {
