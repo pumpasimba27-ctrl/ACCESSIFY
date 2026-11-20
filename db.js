@@ -429,6 +429,13 @@ async function ensureSchema() {
       display_order INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS product_assets (
+      id TEXT PRIMARY KEY,
+      filename TEXT UNIQUE NOT NULL,
+      mime_type TEXT NOT NULL,
+      data TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
     )`
   ];
 
@@ -1619,6 +1626,36 @@ export async function exportFullBackup() {
     customers,
     banners,
     settings
+  };
+}
+
+export async function saveAsset({ filename, mime_type, data }) {
+  await ensureInitialized();
+  const id = `asset_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+  const base64Data = Buffer.isBuffer(data) ? data.toString('base64') : String(data);
+  const mime = mime_type || 'image/jpeg';
+
+  await execute(
+    `INSERT INTO product_assets (id, filename, mime_type, data, created_at)
+     VALUES (?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(filename) DO UPDATE SET data = excluded.data, mime_type = excluded.mime_type`,
+    [id, filename, mime, base64Data]
+  );
+  return { id, filename, mime_type: mime };
+}
+
+export async function getAsset(filename) {
+  await ensureInitialized();
+  const row = await queryOne(
+    `SELECT id, filename, mime_type, data FROM product_assets WHERE filename = ? LIMIT 1`,
+    [filename]
+  );
+  if (!row || !row.data) return null;
+  return {
+    id: row.id,
+    filename: row.filename,
+    mime_type: row.mime_type || 'image/jpeg',
+    data: Buffer.from(row.data, 'base64')
   };
 }
 

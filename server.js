@@ -45,7 +45,9 @@ import {
   updateStoreSettings,
   getAuditLogs,
   exportFullBackup,
-  getDbVersion
+  getDbVersion,
+  saveAsset,
+  getAsset
 } from './db.js';
 
 dotenv.config();
@@ -200,6 +202,52 @@ const staticImgOptions = {
     }
   }
 };
+
+// -------------------------------------------------------------
+// PERSISTENT ASSET SERVING (/uploads/:filename)
+// Checks disk/tmp cache first, falls back to persistent DB product_assets
+// -------------------------------------------------------------
+app.get('/uploads/:filename', async (req, res, next) => {
+  const filename = path.basename(req.params.filename);
+
+  // 1. Check local disk locations
+  const localCandidates = [
+    path.join(TMP_UPLOADS, filename),
+    path.join(UPLOADS_DIR, filename),
+    path.join(PUBLIC_DIR, 'uploads', filename),
+    path.join(process.cwd(), 'uploads', filename)
+  ];
+
+  for (const cand of localCandidates) {
+    if (fs.existsSync(cand)) {
+      const ext = path.extname(filename).toLowerCase();
+      const mime = ext === '.webp' ? 'image/webp' : ext === '.png' ? 'image/png' : 'image/jpeg';
+      res.setHeader('Content-Type', mime);
+      res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+      return res.sendFile(cand);
+    }
+  }
+
+  // 2. Fallback to Turso Cloud DB (product_assets table)
+  try {
+    const asset = await getAsset(filename);
+    if (asset && asset.data) {
+      // Cache to /tmp/uploads for future fast hits on this container
+      try {
+        if (!fs.existsSync(TMP_UPLOADS)) fs.mkdirSync(TMP_UPLOADS, { recursive: true });
+        fs.writeFileSync(path.join(TMP_UPLOADS, filename), asset.data);
+      } catch (_) { }
+
+      res.setHeader('Content-Type', asset.mime_type || 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+      return res.send(asset.data);
+    }
+  } catch (err) {
+    console.warn(`Failed to retrieve asset "${filename}" from database:`, err.message);
+  }
+
+  next();
+});
 
 const uploadsStaticOptions = {
   maxAge: '7d',
@@ -880,6 +928,22 @@ app.post('/api/admin/upload', requireAdmin, (req, res, next) => {
       finalBuffer = file.buffer;
     }
 
+    // 1. Permanently store in persistent database (product_assets table)
+    try {
+      await saveAsset({
+        filename: safeName,
+        mime_type: finalMime,
+        data: finalBuffer
+      });
+    } catch (assetErr) {
+      console.warn(`Failed to persist asset "${safeName}" to DB:`, assetErr.message);
+    }
+
+    // 2. Also write to local disk / tmp for immediate fast serving
+    const targetDir = isVercel ? TMP_UPLOADS : UPLOADS_DIR;
+    if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+    fs.writeFileSync(path.join(targetDir, safeName), finalBuffer);
+
     let uploadedUrl = null;
     if (blobToken) {
       try {
@@ -890,14 +954,11 @@ app.post('/api/admin/upload', requireAdmin, (req, res, next) => {
         });
         uploadedUrl = blob.url;
       } catch (blobErr) {
-        console.warn('Vercel blob upload failed/suspended, falling back to disk:', blobErr.message);
+        console.warn('Vercel blob upload failed/suspended, serving via persistent /uploads:', blobErr.message);
       }
     }
 
     if (!uploadedUrl) {
-      const targetDir = isVercel ? TMP_UPLOADS : UPLOADS_DIR;
-      if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-      fs.writeFileSync(path.join(targetDir, safeName), finalBuffer);
       uploadedUrl = `/uploads/${safeName}`;
     }
     urls.push(uploadedUrl);
@@ -905,8 +966,8 @@ app.post('/api/admin/upload', requireAdmin, (req, res, next) => {
 
   res.json({
     success: true,
-    message: `${urls.length} image(s) uploaded successfully`,
-    storage: blobToken ? 'vercel-blob' : 'local-disk',
+    message: `${urls.length} image(s) uploaded and permanently stored`,
+    storage: 'persistent-db',
     urls
   });
 });
