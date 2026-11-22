@@ -291,50 +291,19 @@ Please provide more details about availability and ordering.`;
 
   const FALLBACK_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 533' fill='%23050505'%3E%3Crect width='400' height='533' fill='%23050505'/%3E%3Ctext x='50%25' y='50%25' fill='%23555' font-family='sans-serif' font-size='13' letter-spacing='2' text-anchor='middle' dominant-baseline='middle'%3EACCESSIFY%3C/text%3E%3C/svg%3E";
 
-  function getFilteredAndSortedProducts() {
-    let list = allProducts.slice();
-    if (currentCategory && currentCategory !== 'all') {
-      const catLower = currentCategory.toLowerCase();
-      list = list.filter(p => (p.category || '').toLowerCase() === catLower);
-    }
-    if (currentSearchQuery) {
-      const q = currentSearchQuery.trim().toLowerCase();
-      list = list.filter(p => {
-        const n = (p.name || '').toLowerCase();
-        const c = (p.category || '').toLowerCase();
-        const d = (p.description || '').toLowerCase();
-        return n.includes(q) || c.includes(q) || d.includes(q);
-      });
-    }
-
-    if (currentSort === 'price_asc') {
-      list.sort((a, b) => Number(a.price) - Number(b.price));
-    } else if (currentSort === 'price_desc') {
-      list.sort((a, b) => Number(b.price) - Number(a.price));
-    } else if (currentSort === 'newest') {
-      list.sort((a, b) => {
-        const timeA = new Date(a.created_at || 0).getTime();
-        const timeB = new Date(b.created_at || 0).getTime();
-        if (timeA !== timeB) return timeB - timeA;
-        return (b.id || '').localeCompare(a.id || '');
-      });
-    } else {
-      list.sort((a, b) => {
-        const timeA = new Date(a.created_at || 0).getTime();
-        const timeB = new Date(b.created_at || 0).getTime();
-        if (timeA !== timeB) return timeB - timeA;
-        if (Boolean(b.newArrival) !== Boolean(a.newArrival)) return b.newArrival ? 1 : -1;
-        if (Boolean(b.featured) !== Boolean(a.featured)) return b.featured ? 1 : -1;
-        return (b.id || '').localeCompare(a.id || '');
-      });
-    }
-    return list;
-  }
-
   async function fetchProducts(silent = false) {
     try {
       const params = new URLSearchParams();
       params.append('section', currentSection);
+      if (currentCategory && currentCategory !== 'all') {
+        params.append('category', currentCategory);
+      }
+      if (currentSort && currentSort !== 'default') {
+        params.append('sort', currentSort);
+      }
+      if (currentSearchQuery) {
+        params.append('search', currentSearchQuery);
+      }
       params.append('t', Date.now());
 
       const res = await fetch(`${API_BASE}/products?${params.toString()}`);
@@ -344,7 +313,7 @@ Please provide more details about availability and ordering.`;
         const prevVersion = currentDbVersion;
         allProducts = json.data;
         currentDbVersion = json.dbVersion;
-        renderProductsGrid(getFilteredAndSortedProducts());
+        renderProductsGrid(allProducts);
 
         // Keep open search modal results in sync with live catalogue updates
         if (el.searchModal && el.searchModal.classList.contains('open') && el.searchInput && el.searchInput.value.trim()) {
@@ -442,11 +411,7 @@ Please provide more details about availability and ordering.`;
     renderHeaderNav();
     renderCategoryPills();
     renderMobileCategories();
-    if (allProducts && allProducts.length > 0) {
-      renderProductsGrid(getFilteredAndSortedProducts());
-    } else {
-      fetchProducts();
-    }
+    fetchProducts();
     scrollToCatalog();
   }
 
@@ -468,61 +433,54 @@ Please provide more details about availability and ordering.`;
 
     if (el.catalogCount) {
       if (currentSection === 'clothing' && products.length === 0) {
-        el.catalogCount.textContent = 'COMING SOON // 0 PIECES';
+        el.catalogCount.textContent = 'COMING SOON / ARCHIVE LOCKED';
       } else {
-        el.catalogCount.textContent = `SHOWING ${products.length} PIECES`;
+        el.catalogCount.textContent = `[${products.length} PIECES]`;
       }
     }
 
     if (products.length === 0) {
       if (currentSection === 'clothing') {
         el.productsGrid.innerHTML = `
-          <div class="clothing-empty-state">
-            <div class="empty-icon-box">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/>
-              </svg>
-            </div>
-            <h3 class="clothing-empty-title">CLOTHING VAULT PREPARING</h3>
-            <p class="clothing-empty-desc">
-              The ACCESSIFY streetwear apparel collection is currently in production. Heavyweight silhouettes, oversized drop-shoulder cuts, and limited-edition garments are dropping soon.
-            </p>
-            <div class="clothing-empty-actions">
-              <a href="https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hello ACCESSIFY! When is the Clothing drop launching?")}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.966.527 1.93.811 2.796.811 3.181 0 5.767-2.587 5.768-5.766.001-3.181-2.585-5.798-5.768-5.798zm3.385 8.163c-.145.408-.847.781-1.183.829-.336.048-.775.068-2.223-.529-1.854-.764-3.04-2.653-3.132-2.775-.093-.122-.749-.997-.749-1.902 0-.904.472-1.349.64-1.533.168-.184.368-.23.491-.23.123 0 .245.001.353.007.113.005.263-.043.412.316.153.368.522 1.272.568 1.365.046.092.077.2.015.323-.061.123-.092.2-.184.307-.092.107-.194.24-.277.323-.092.092-.189.193-.081.378.107.185.477.787 1.025 1.275.707.63 1.303.825 1.488.917.184.092.292.077.4-.046.108-.123.461-.537.584-.722.123-.184.246-.153.414-.092.169.061 1.074.507 1.258.6.184.092.307.138.353.215.046.077.046.446-.099.854z"/>
-                </svg>
-                <span>ENQUIRE CLOTHING DROP ON WHATSAPP</span>
-              </a>
-              <button type="button" class="btn btn-outline" id="switch-to-accessories-btn">
-                EXPLORE ACCESSORIES ARCHIVE
-              </button>
-            </div>
+          <div class="empty-catalog-state">
+            <span class="empty-code">// ARCHIVE LOCKED</span>
+            <h3>Clothing Drop Coming Soon</h3>
+            <p>Our apparel archive is currently being prepared for the upcoming seasonal drop.</p>
+            <a href="#accessories" class="btn-archive-primary" id="empty-switch-acc">
+              EXPLORE ACCESSORIES
+              <span class="btn-arrow">→</span>
+            </a>
           </div>
         `;
-        document.getElementById('switch-to-accessories-btn')?.addEventListener('click', () => {
-          switchSection('accessories');
-          scrollToCatalog();
-        });
+        const switchBtn = document.getElementById('empty-switch-acc');
+        if (switchBtn) {
+          switchBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchSection('accessories');
+          });
+        }
       } else {
         el.productsGrid.innerHTML = `
-          <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 1rem;">
-            <h3 style="font-size: 1.25rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem;">
-              No Pieces Found
-            </h3>
-            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-              Try clearing filters or search terms.
-            </p>
-            <button class="btn btn-outline btn-sm" id="reset-filters-btn">RESET ALL FILTERS</button>
+          <div class="empty-catalog-state">
+            <span class="empty-code">// NO MATCHES FOUND</span>
+            <h3>Zero Archive Items Found</h3>
+            <p>Try clearing your category filter or search query to view all available pieces.</p>
+            <button class="btn-archive-primary" id="empty-clear-filters">
+              RESET ALL FILTERS
+              <span class="btn-arrow">↺</span>
+            </button>
           </div>
         `;
-        document.getElementById('reset-filters-btn')?.addEventListener('click', () => {
-          currentCategory = 'all';
-          currentSearchQuery = '';
-          renderHeaderNav();
-          renderCategoryPills();
-          renderProductsGrid(getFilteredAndSortedProducts());
-        });
+        const clearBtn = document.getElementById('empty-clear-filters');
+        if (clearBtn) {
+          clearBtn.addEventListener('click', () => {
+            currentCategory = 'all';
+            currentSearchQuery = '';
+            renderHeaderNav();
+            renderCategoryPills();
+            fetchProducts();
+          });
+        }
       }
       return;
     }
@@ -992,11 +950,7 @@ Please provide more details about availability and ordering.`;
     // Category sorting dropdown
     el.sortSelect?.addEventListener('change', (e) => {
       currentSort = e.target.value;
-      if (allProducts && allProducts.length > 0) {
-        renderProductsGrid(getFilteredAndSortedProducts());
-      } else {
-        fetchProducts();
-      }
+      fetchProducts();
     });
 
     // Header Category Nav Links

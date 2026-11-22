@@ -194,11 +194,13 @@ app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 // Static Assets with Edge & Browser Caching Options
 const staticImgOptions = {
-  maxAge: '30d',
-  immutable: true,
   setHeaders: (res, filePath) => {
-    if (/\.(webp|png|jpe?g|gif|avif|svg|ico)$/i.test(filePath)) {
+    if (/\.(webp|png|jpe?g|gif|avif|svg|ico|woff2?|ttf|eot)$/i.test(filePath)) {
       res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+    } else if (/\.(css|js)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    } else if (/\.html$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
   }
 };
