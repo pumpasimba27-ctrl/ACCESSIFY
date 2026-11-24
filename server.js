@@ -452,12 +452,17 @@ app.get('/api/banners', async (req, res) => {
 app.get('/api/payment-config', async (req, res) => {
   try {
     const settings = await getStoreSettings();
+    let waNumber = (settings.whatsapp_number || '').trim();
+    if (!waNumber || waNumber === '917012408015') {
+      waNumber = '917012400815';
+    }
+    const delCharge = settings.delivery_charge !== undefined && settings.delivery_charge !== '' ? Number(settings.delivery_charge) : 99;
     res.json({
       success: true,
       upiId: settings.upi_id || '7012400815@upi',
       upiName: settings.upi_name || 'ACCESSIFY',
-      whatsappNumber: settings.whatsapp_number || '917012400815',
-      deliveryCharge: Number(settings.delivery_charge || 0),
+      whatsappNumber: waNumber,
+      deliveryCharge: delCharge,
       qrImage: settings.upi_qr_image || '/assets/images/upi-qr.png'
     });
   } catch (err) {

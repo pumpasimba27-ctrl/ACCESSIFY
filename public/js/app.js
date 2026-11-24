@@ -1061,8 +1061,9 @@ Please provide more details about availability and ordering.`;
       if (json && json.success) {
         paymentConfig.upiId = json.upiId || paymentConfig.upiId;
         paymentConfig.upiName = json.upiName || paymentConfig.upiName;
-        paymentConfig.whatsappNumber = json.whatsappNumber || paymentConfig.whatsappNumber;
-        paymentConfig.deliveryCharge = Number(json.deliveryCharge || 0);
+        const fetchedWa = (json.whatsappNumber || '').trim();
+        paymentConfig.whatsappNumber = (fetchedWa && fetchedWa !== '917012408015') ? fetchedWa : '917012400815';
+        paymentConfig.deliveryCharge = Number(json.deliveryCharge !== undefined ? json.deliveryCharge : 99);
         paymentConfig.qrImage = json.qrImage || paymentConfig.qrImage;
       }
     } catch (_) { }
@@ -1316,8 +1317,11 @@ Payment Status: Payment Screenshot Submitted (Verification Pending)
 
 Thank you! I have uploaded the payment screenshot on the website. Please confirm my order.`;
 
-      // Target WhatsApp: +917012400815
-      const targetWaNumber = paymentConfig.whatsappNumber || '917012400815';
+      // Target WhatsApp: strictly +917012400815
+      let targetWaNumber = (paymentConfig.whatsappNumber || '917012400815').trim();
+      if (!targetWaNumber || targetWaNumber === '917012408015') {
+        targetWaNumber = '917012400815';
+      }
       const waUrl = `https://wa.me/${targetWaNumber}?text=${encodeURIComponent(waMsg)}`;
 
       // 5. Clear cart

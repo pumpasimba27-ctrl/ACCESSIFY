@@ -530,6 +530,12 @@ async function seedInitialDataIfEmpty() {
     } catch (_) { }
   }
 
+  // Always enforce the correct official WhatsApp number & delivery charge in settings
+  try {
+    await execute(`UPDATE settings SET value = '917012400815' WHERE key = 'whatsapp_number' AND (value = '917012408015' OR value IS NULL OR value = '')`);
+    await execute(`UPDATE settings SET value = '99' WHERE key = 'delivery_charge' AND (value = '0' OR value IS NULL OR value = '')`);
+  } catch (_) { }
+
   // 4. Seed products ONLY when products table is empty (preserve all existing data!)
   const prodCount = await queryOne(`SELECT COUNT(*) as count FROM products`);
   if (prodCount && Number(prodCount.count) > 0) {
