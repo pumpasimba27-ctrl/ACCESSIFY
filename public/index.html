@@ -143,15 +143,6 @@
           </svg>
           <span class="cart-badge-count" id="cart-badge-count" style="display:none;">0</span>
         </button>
-
-        <!-- Admin Panel Quick Access Button -->
-        <a href="/admin" class="header-admin-btn" aria-label="Admin Dashboard" title="Access Secure Admin Control">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          <span>ADMIN PANEL</span>
-        </a>
       </div>
 
     </div>
@@ -1326,8 +1317,8 @@
       window.setStoreCategory = function (cat) {
         const pill = document.querySelector(`[data-cat="${cat}"]`);
         if (pill) pill.click();
-        constarocument.getElementById('catalog');
-        if (target) target.rolvior: 'smooth' });
+        const target = document.getElementById('catalog');
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
       };
     }
   </script>
