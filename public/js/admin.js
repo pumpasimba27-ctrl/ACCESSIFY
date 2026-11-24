@@ -1330,6 +1330,7 @@
     const s = state.settings || {};
     $('set-store-name').value = s.store_name || 'ACCESSIFY';
     $('set-whatsapp').value = s.whatsapp_number || '';
+    if ($('set-delivery-charge')) $('set-delivery-charge').value = s.delivery_charge !== undefined ? s.delivery_charge : '99';
     $('set-promo').value = s.promo_notice || '';
     $('set-instagram').value = s.instagram_url || '';
     $('set-dispatch').value = s.dispatch_notice || '';
@@ -1411,6 +1412,7 @@
       const payload = {
         store_name: $('set-store-name').value.trim(),
         whatsapp_number: $('set-whatsapp').value.trim(),
+        delivery_charge: $('set-delivery-charge') ? $('set-delivery-charge').value.trim() : '99',
         promo_notice: $('set-promo').value.trim(),
         instagram_url: $('set-instagram').value.trim(),
         dispatch_notice: $('set-dispatch').value.trim(),

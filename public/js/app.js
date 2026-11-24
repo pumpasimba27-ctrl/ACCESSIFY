@@ -40,7 +40,7 @@
     upiId: '7012400815@upi',
     upiName: 'ACCESSIFY',
     whatsappNumber: '917012400815',
-    deliveryCharge: 0,
+    deliveryCharge: 99,
     qrImage: '/assets/images/upi-qr.png'
   };
 

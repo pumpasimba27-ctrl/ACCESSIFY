@@ -521,7 +521,7 @@ async function seedInitialDataIfEmpty() {
     ['whatsapp_number', '917012400815'],
     ['upi_id', '7012400815@upi'],
     ['upi_name', 'ACCESSIFY'],
-    ['delivery_charge', '0'],
+    ['delivery_charge', '99'],
     ['upi_qr_image', '/assets/images/upi-qr.png']
   ];
   for (const [key, val] of defaultSettings) {
