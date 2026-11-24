@@ -1114,17 +1114,18 @@
 
                 <div class="upi-qr-display-box">
                   <div class="upi-qr-image-wrap">
-                    <img id="checkout-upi-qr-img" src="/api/upi-qr" alt="Scan UPI QR Code to Pay">
+                    <img id="checkout-upi-qr-img" src="/assets/images/renjudinob-upi-qr.jpg" alt="ACCESSIFY UPI Payment QR">
                   </div>
-                  <span style="font-size:0.72rem; color:#a1a1aa; letter-spacing:0.04em;">
-                    SCAN WITH GPAY / PHONEPE / PAYTM / CRED
+                  <span style="font-size:0.75rem; color:#a1a1aa; letter-spacing:0.04em;">
+                    SCAN WITH ANY UPI APP (GPAY / PHONEPE / PAYTM / CRED / BHIM)
                   </span>
                 </div>
 
                 <div class="upi-id-row">
                   <div>
-                    <span style="font-size:0.68rem; color:#71717a; display:block; text-transform:uppercase;">UPI
-                      ID</span>
+                    <span style="font-size:0.68rem; color:#71717a; display:block; text-transform:uppercase;">Account Name</span>
+                    <span style="color:#ffffff; font-weight:700; font-size:0.88rem; letter-spacing:0.04em; display:block; margin-bottom:0.35rem;">ACCESSIFY</span>
+                    <span style="font-size:0.68rem; color:#71717a; display:block; text-transform:uppercase;">UPI ID</span>
                     <span class="upi-id-text" id="checkout-upi-id-text">renjudinob@okaxis</span>
                   </div>
                   <button type="button" class="btn-copy-chip" id="btn-copy-upi-id">
@@ -1205,12 +1206,14 @@
 
       <!-- Action Required Instruction Alert -->
       <div class="success-instruction-alert">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          style="flex-shrink:0;">
           <circle cx="12" cy="12" r="10" />
           <line x1="12" y1="8" x2="12" y2="12" />
           <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
-        <span><strong>ACTION REQUIRED:</strong> Please attach your UPI payment screenshot to this WhatsApp message before sending your order.</span>
+        <span><strong>ACTION REQUIRED:</strong> Please attach your UPI payment screenshot to this WhatsApp message
+          before sending your order.</span>
       </div>
 
       <!-- Customer & Address Summary -->
@@ -1248,7 +1251,8 @@
           </div>
           <div class="order-success-detail-row bold">
             <span>Grand Total</span>
-            <span id="success-order-total" style="color:#6ee7b7; font-family:var(--font-mono, monospace); font-size:1.05rem;">₹0</span>
+            <span id="success-order-total"
+              style="color:#6ee7b7; font-family:var(--font-mono, monospace); font-size:1.05rem;">₹0</span>
           </div>
         </div>
       </div>
@@ -1257,7 +1261,8 @@
       <div class="order-success-details-box">
         <div class="success-section-header">📸 PAYMENT SCREENSHOT</div>
         <div class="success-screenshot-row">
-          <img id="success-screenshot-thumb" class="success-screenshot-thumb" src="" alt="Payment Screenshot" title="Click to view full size" />
+          <img id="success-screenshot-thumb" class="success-screenshot-thumb" src="" alt="Payment Screenshot"
+            title="Click to view full size" />
           <div style="flex:1;">
             <div style="font-size:0.75rem; color:#a1a1aa; margin-bottom:0.35rem;">
               Payment Status: <strong style="color:#f59e0b;">Screenshot submitted – verification pending</strong>
@@ -1314,7 +1319,7 @@
         const pill = document.querySelector(`[data-cat="${cat}"]`);
         if (pill) pill.click();
         constarocument.getElementById('catalog');
-        if (target) target.scrollIntoView({ behavior: 'smooth' });
+        if (target) target.scrolntobehavior: 'smooth' });
       };
     }
   </script>

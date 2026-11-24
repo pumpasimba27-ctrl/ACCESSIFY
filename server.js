@@ -472,6 +472,13 @@ app.get('/api/payment-config', async (req, res) => {
 
 app.get('/api/upi-qr', async (req, res) => {
   try {
+    const customQrPath = path.join(PUBLIC_DIR, 'assets', 'images', 'renjudinob-upi-qr.jpg');
+    if (fs.existsSync(customQrPath)) {
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.sendFile(customQrPath);
+    }
+
     const settings = await getStoreSettings();
     const upiId = req.query.upi_id || settings.upi_id || 'renjudinob@okaxis';
     const upiName = req.query.name || settings.upi_name || 'ACCESSIFY';

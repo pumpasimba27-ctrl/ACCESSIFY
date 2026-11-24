@@ -41,7 +41,7 @@
     upiName: 'ACCESSIFY',
     whatsappNumber: '917012400815',
     deliveryCharge: 99,
-    qrImage: '/assets/images/upi-qr.png'
+    qrImage: '/assets/images/renjudinob-upi-qr.jpg'
   };
 
   // Selected screenshot file for checkout
@@ -1070,7 +1070,7 @@ Please provide more details about availability and ordering.`;
         const fetchedWa = (json.whatsappNumber || '').trim();
         paymentConfig.whatsappNumber = (fetchedWa && fetchedWa !== '917012408015') ? fetchedWa : '917012400815';
         paymentConfig.deliveryCharge = Number(json.deliveryCharge !== undefined ? json.deliveryCharge : 99);
-        paymentConfig.qrImage = json.qrImage || paymentConfig.qrImage;
+        paymentConfig.qrImage = json.qrImage || '/assets/images/renjudinob-upi-qr.jpg';
       }
     } catch (_) { }
   }
@@ -1122,9 +1122,9 @@ Please provide more details about availability and ordering.`;
       el.checkoutPayableAmount.textContent = `₹${totalAmount.toLocaleString('en-IN')}`;
     }
 
-    // Set QR Image URL with dynamic amount
+    // Set exact original QR image directly from public assets
     if (el.checkoutUpiQrImg) {
-      el.checkoutUpiQrImg.src = `${API_BASE}/upi-qr?amount=${totalAmount}&upi_id=${encodeURIComponent(paymentConfig.upiId)}&t=${Date.now()}`;
+      el.checkoutUpiQrImg.src = paymentConfig.qrImage || '/assets/images/renjudinob-upi-qr.jpg';
     }
 
     // Set UPI ID
@@ -1309,7 +1309,7 @@ Please provide more details about availability and ordering.`;
       const fullAddress = [createdOrder.house, createdOrder.street, createdOrder.city, createdOrder.state].filter(Boolean).join(', ');
 
       const waMsg =
-`💎 NEW WEBSITE ORDER 💎
+        `💎 NEW WEBSITE ORDER 💎
 
 Order ID: ${createdOrder.order_number}
 
@@ -1802,14 +1802,22 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
 
     // Copy UPI ID Button
     el.btnCopyUpiId?.addEventListener('click', () => {
-      const upiId = paymentConfig.upiId || '7012400815@upi';
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(upiId).then(() => {
-          const orig = el.btnCopyUpiId.textContent;
-          el.btnCopyUpiId.textContent = 'COPIED!';
-          setTimeout(() => el.btnCopyUpiId.textContent = orig, 1800);
-          showToast(`Copied UPI ID "${upiId}" to clipboard`);
+      const upiId = paymentConfig.upiId || 'renjudinob@okaxis';
+      const markCopied = () => {
+        const orig = el.btnCopyUpiId.textContent;
+        el.btnCopyUpiId.textContent = 'COPIED!';
+        setTimeout(() => el.btnCopyUpiId.textContent = orig, 1800);
+        showToast(`Copied UPI ID "${upiId}" to clipboard`);
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(upiId).then(markCopied).catch(() => {
+          fallbackCopyText(upiId);
+          markCopied();
         });
+      } else {
+        fallbackCopyText(upiId);
+        markCopied();
       }
     });
 
