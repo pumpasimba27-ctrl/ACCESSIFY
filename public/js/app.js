@@ -39,7 +39,7 @@
   let paymentConfig = {
     upiId: '7012400815@upi',
     upiName: 'ACCESSIFY',
-    whatsappNumber: '917012408015',
+    whatsappNumber: '917012400815',
     deliveryCharge: 0,
     qrImage: '/assets/images/upi-qr.png'
   };
@@ -885,7 +885,7 @@ Please provide more details about availability and ordering.`;
   function saveCart() {
     try {
       localStorage.setItem('accessify_cart_v1', JSON.stringify(cart));
-    } catch (_) {}
+    } catch (_) { }
     updateCartUI();
   }
 
@@ -1065,7 +1065,7 @@ Please provide more details about availability and ordering.`;
         paymentConfig.deliveryCharge = Number(json.deliveryCharge || 0);
         paymentConfig.qrImage = json.qrImage || paymentConfig.qrImage;
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   async function openCheckoutModal() {
@@ -1099,7 +1099,7 @@ Please provide more details about availability and ordering.`;
       });
       sumHtml += `
         <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:0.45rem; margin-top:0.45rem; display:flex; justify-content:space-between; font-size:0.82rem; font-weight:800; color:#fff;">
-          <span>Subtotal (${cart.reduce((s,i)=>s+i.qty,0)} items)</span>
+          <span>Subtotal (${cart.reduce((s, i) => s + i.qty, 0)} items)</span>
           <span style="font-family:var(--font-mono, monospace);">₹${subtotal.toLocaleString('en-IN')}</span>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#a1a1aa; margin-top:0.2rem;">
@@ -1142,7 +1142,7 @@ Please provide more details about availability and ordering.`;
       if (savedCust.state) document.getElementById('chk-state').value = savedCust.state;
       if (savedCust.pincode) document.getElementById('chk-pincode').value = savedCust.pincode;
       if (savedCust.landmark) document.getElementById('chk-landmark').value = savedCust.landmark;
-    } catch (_) {}
+    } catch (_) { }
 
     if (el.checkoutErrorBox) {
       el.checkoutErrorBox.classList.remove('show');
@@ -1288,7 +1288,7 @@ Please provide more details about availability and ordering.`;
         localStorage.setItem('accessify_cust_v1', JSON.stringify({
           name, phone, email, house, street, city, state, pincode, landmark
         }));
-      } catch (_) {}
+      } catch (_) { }
 
       // 4. Construct WhatsApp Order Notification Message
       const itemsListFormatted = createdOrder.items.map(it => {
@@ -1297,7 +1297,7 @@ Please provide more details about availability and ordering.`;
       }).join('\n');
 
       const waMsg =
-`💎 NEW ORDER RECEIVED - ACCESSIFY 💎
+        `💎 NEW ORDER RECEIVED - ACCESSIFY 💎
 
 Order ID: ${createdOrder.order_number}
 Customer: ${createdOrder.customer_name}
@@ -1316,8 +1316,8 @@ Payment Status: Payment Screenshot Submitted (Verification Pending)
 
 Thank you! I have uploaded the payment screenshot on the website. Please confirm my order.`;
 
-      // Target WhatsApp: +917012408015
-      const targetWaNumber = paymentConfig.whatsappNumber || '917012408015';
+      // Target WhatsApp: +917012400815
+      const targetWaNumber = paymentConfig.whatsappNumber || '917012400815';
       const waUrl = `https://wa.me/${targetWaNumber}?text=${encodeURIComponent(waMsg)}`;
 
       // 5. Clear cart

@@ -67,7 +67,7 @@ function initAdapter() {
     const tmpDataDir = path.join('/tmp', 'data');
     try {
       if (!fs.existsSync(tmpDataDir)) fs.mkdirSync(tmpDataDir, { recursive: true });
-    } catch (_) {}
+    } catch (_) { }
     const tmpDbPath = path.join(tmpDataDir, 'accessify.db');
     let sourceDb = null;
     for (const dir of candidateDataDirs) {
@@ -93,18 +93,18 @@ function initAdapter() {
     localDataDir = sourceDataDir;
     try {
       if (!fs.existsSync(localDataDir)) fs.mkdirSync(localDataDir, { recursive: true });
-    } catch (_) {}
+    } catch (_) { }
   }
 
   localDb = new Database(dbPath);
   try {
     localDb.pragma('journal_mode = WAL');
   } catch (_) {
-    try { localDb.pragma('journal_mode = DELETE'); } catch (__) {}
+    try { localDb.pragma('journal_mode = DELETE'); } catch (__) { }
   }
   try {
     localDb.pragma('foreign_keys = ON');
-  } catch (_) {}
+  } catch (_) { }
 }
 
 initAdapter();
@@ -442,23 +442,23 @@ async function ensureSchema() {
   await execStatements(ddlStatements);
 
   // Safe migrations for older local DBs missing section columns
-  try { await execute("ALTER TABLE products ADD COLUMN section TEXT DEFAULT 'accessories'"); } catch (_) {}
-  try { await execute("ALTER TABLE categories ADD COLUMN section TEXT DEFAULT 'accessories'"); } catch (_) {}
+  try { await execute("ALTER TABLE products ADD COLUMN section TEXT DEFAULT 'accessories'"); } catch (_) { }
+  try { await execute("ALTER TABLE categories ADD COLUMN section TEXT DEFAULT 'accessories'"); } catch (_) { }
   try {
     await execute("UPDATE products SET section = 'accessories' WHERE section IS NULL OR section = ''");
     await execute("UPDATE categories SET section = 'accessories' WHERE section IS NULL OR section = ''");
-  } catch (_) {}
+  } catch (_) { }
 
   // Safe migrations for enhanced orders & checkout fields
-  try { await execute("ALTER TABLE orders ADD COLUMN payment_screenshot TEXT DEFAULT ''"); } catch (_) {}
-  try { await execute("ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT 'upi'"); } catch (_) {}
-  try { await execute("ALTER TABLE orders ADD COLUMN delivery_charge REAL DEFAULT 0"); } catch (_) {}
-  try { await execute("ALTER TABLE orders ADD COLUMN house TEXT DEFAULT ''"); } catch (_) {}
-  try { await execute("ALTER TABLE orders ADD COLUMN street TEXT DEFAULT ''"); } catch (_) {}
-  try { await execute("ALTER TABLE orders ADD COLUMN city TEXT DEFAULT ''"); } catch (_) {}
-  try { await execute("ALTER TABLE orders ADD COLUMN state TEXT DEFAULT ''"); } catch (_) {}
-  try { await execute("ALTER TABLE orders ADD COLUMN pincode TEXT DEFAULT ''"); } catch (_) {}
-  try { await execute("ALTER TABLE orders ADD COLUMN landmark TEXT DEFAULT ''"); } catch (_) {}
+  try { await execute("ALTER TABLE orders ADD COLUMN payment_screenshot TEXT DEFAULT ''"); } catch (_) { }
+  try { await execute("ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT 'upi'"); } catch (_) { }
+  try { await execute("ALTER TABLE orders ADD COLUMN delivery_charge REAL DEFAULT 0"); } catch (_) { }
+  try { await execute("ALTER TABLE orders ADD COLUMN house TEXT DEFAULT ''"); } catch (_) { }
+  try { await execute("ALTER TABLE orders ADD COLUMN street TEXT DEFAULT ''"); } catch (_) { }
+  try { await execute("ALTER TABLE orders ADD COLUMN city TEXT DEFAULT ''"); } catch (_) { }
+  try { await execute("ALTER TABLE orders ADD COLUMN state TEXT DEFAULT ''"); } catch (_) { }
+  try { await execute("ALTER TABLE orders ADD COLUMN pincode TEXT DEFAULT ''"); } catch (_) { }
+  try { await execute("ALTER TABLE orders ADD COLUMN landmark TEXT DEFAULT ''"); } catch (_) { }
 }
 
 async function seedInitialDataIfEmpty() {
@@ -473,7 +473,7 @@ async function seedInitialDataIfEmpty() {
         if (Array.isArray(parsed.categories) && parsed.categories.length > 0) {
           seedCats = parsed.categories;
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     const catStatements = seedCats.map(c => ({
@@ -518,7 +518,7 @@ async function seedInitialDataIfEmpty() {
   // Seed default store & UPI settings if missing
   const defaultSettings = [
     ['store_name', 'ACCESSIFY'],
-    ['whatsapp_number', '917012408015'],
+    ['whatsapp_number', '917012400815'],
     ['upi_id', '7012400815@upi'],
     ['upi_name', 'ACCESSIFY'],
     ['delivery_charge', '0'],
@@ -527,7 +527,7 @@ async function seedInitialDataIfEmpty() {
   for (const [key, val] of defaultSettings) {
     try {
       await execute(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`, [key, val]);
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // 4. Seed products ONLY when products table is empty (preserve all existing data!)
@@ -732,7 +732,7 @@ export async function createSessionRecord(tokenHash, username, expiresAt) {
   // Clean up expired sessions periodically
   try {
     await execute(`DELETE FROM admin_sessions WHERE expires_at < ?`, [Date.now()]);
-  } catch (_) {}
+  } catch (_) { }
   await execute(
     `INSERT OR REPLACE INTO admin_sessions (token_hash, username, expires_at) VALUES (?, ?, ?)`,
     [tokenHash, username, expiresAt]

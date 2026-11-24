@@ -456,7 +456,7 @@ app.get('/api/payment-config', async (req, res) => {
       success: true,
       upiId: settings.upi_id || '7012400815@upi',
       upiName: settings.upi_name || 'ACCESSIFY',
-      whatsappNumber: settings.whatsapp_number || '917012408015',
+      whatsappNumber: settings.whatsapp_number || '917012400815',
       deliveryCharge: Number(settings.delivery_charge || 0),
       qrImage: settings.upi_qr_image || '/assets/images/upi-qr.png'
     });
@@ -520,7 +520,7 @@ app.post('/api/upload-payment-proof', upload.single('screenshot'), async (req, r
         filename = `proof-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.jpg`;
         mimeType = 'image/jpeg';
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // Save to disk targets
     const localTargets = [
@@ -533,7 +533,7 @@ app.post('/api/upload-payment-proof', upload.single('screenshot'), async (req, r
         const dir = path.dirname(target);
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(target, finalBuffer);
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Persist to database product_assets for cloud/Vercel persistence
