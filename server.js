@@ -459,7 +459,7 @@ app.get('/api/payment-config', async (req, res) => {
     const delCharge = settings.delivery_charge !== undefined && settings.delivery_charge !== '' ? Number(settings.delivery_charge) : 99;
     res.json({
       success: true,
-      upiId: settings.upi_id || '7012400815@upi',
+      upiId: settings.upi_id || 'renjudinob@okaxis',
       upiName: settings.upi_name || 'ACCESSIFY',
       whatsappNumber: waNumber,
       deliveryCharge: delCharge,
@@ -473,7 +473,7 @@ app.get('/api/payment-config', async (req, res) => {
 app.get('/api/upi-qr', async (req, res) => {
   try {
     const settings = await getStoreSettings();
-    const upiId = req.query.upi_id || settings.upi_id || '7012400815@upi';
+    const upiId = req.query.upi_id || settings.upi_id || 'renjudinob@okaxis';
     const upiName = req.query.name || settings.upi_name || 'ACCESSIFY';
     const amount = req.query.amount ? Number(req.query.amount) : null;
     const note = 'ACCESSIFY Order';

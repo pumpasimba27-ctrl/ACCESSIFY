@@ -1125,7 +1125,7 @@
                   <div>
                     <span style="font-size:0.68rem; color:#71717a; display:block; text-transform:uppercase;">UPI
                       ID</span>
-                    <span class="upi-id-text" id="checkout-upi-id-text">7012400815@upi</span>
+                    <span class="upi-id-text" id="checkout-upi-id-text">renjudinob@okaxis</span>
                   </div>
                   <button type="button" class="btn-copy-chip" id="btn-copy-upi-id">
                     COPY UPI ID
@@ -1200,16 +1200,22 @@
   <div class="order-success-modal-backdrop" id="order-success-modal-backdrop" aria-hidden="true">
     <div class="order-success-card">
       <div class="order-success-icon">💎</div>
-      <h2 class="order-success-title">YOUR ORDER HAS BEEN SUBMITTED SUCCESSFULLY 💎</h2>
+      <h2 class="order-success-title">ORDER SUBMITTED SUCCESSFULLY</h2>
       <div class="order-success-id-pill" id="success-order-id">ACC-ORD-000000</div>
 
-      <p style="font-size:0.85rem; color:#a1a1aa; line-height:1.6; margin-bottom:1.25rem;">
-        Your order is registered with ACCESSIFY. A WhatsApp confirmation chat has been prepared for you. Tap the button
-        below to confirm your order details and attach your payment screenshot to our official WhatsApp desk (<strong
-          style="color:#ffffff;">+91 7012400815</strong>).
-      </p>
+      <!-- Action Required Instruction Alert -->
+      <div class="success-instruction-alert">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <span><strong>ACTION REQUIRED:</strong> Please attach your UPI payment screenshot to this WhatsApp message before sending your order.</span>
+      </div>
 
+      <!-- Customer & Address Summary -->
       <div class="order-success-details-box">
+        <div class="success-section-header">CUSTOMER &amp; DELIVERY DETAILS</div>
         <div class="order-success-detail-row">
           <span>Customer</span>
           <span id="success-cust-name" style="color:#ffffff; font-weight:600;">—</span>
@@ -1220,16 +1226,55 @@
         </div>
         <div class="order-success-detail-row">
           <span>Delivery Address</span>
-          <span id="success-cust-address" style="color:#ffffff; max-width:240px; text-align:right;">—</span>
+          <span id="success-cust-address" style="color:#ffffff; max-width:260px; text-align:right;">—</span>
         </div>
-        <div class="order-success-detail-row">
-          <span>Payment Status</span>
-          <span style="color:#f59e0b; font-weight:700;">Screenshot Submitted (Verification Pending)</span>
+      </div>
+
+      <!-- Ordered Products with Direct Clickable Links -->
+      <div class="order-success-details-box">
+        <div class="success-section-header">ORDERED PRODUCTS</div>
+        <div id="success-products-container" class="success-products-container">
+          <!-- Dynamically populated with items & clickable direct links -->
         </div>
-        <div class="order-success-detail-row bold">
-          <span>Total Paid</span>
-          <span id="success-order-total" style="font-family:var(--font-mono, monospace);">₹0</span>
+
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 0.75rem; padding-top: 0.75rem;">
+          <div class="order-success-detail-row">
+            <span>Product Subtotal</span>
+            <span id="success-subtotal" style="color:#ffffff; font-family:var(--font-mono, monospace);">₹0</span>
+          </div>
+          <div class="order-success-detail-row">
+            <span>Delivery Charge</span>
+            <span id="success-delivery" style="color:#ffffff; font-family:var(--font-mono, monospace);">₹99</span>
+          </div>
+          <div class="order-success-detail-row bold">
+            <span>Grand Total</span>
+            <span id="success-order-total" style="color:#6ee7b7; font-family:var(--font-mono, monospace); font-size:1.05rem;">₹0</span>
+          </div>
         </div>
+      </div>
+
+      <!-- Payment Proof Preview & Download Section -->
+      <div class="order-success-details-box">
+        <div class="success-section-header">📸 PAYMENT SCREENSHOT</div>
+        <div class="success-screenshot-row">
+          <img id="success-screenshot-thumb" class="success-screenshot-thumb" src="" alt="Payment Screenshot" title="Click to view full size" />
+          <div style="flex:1;">
+            <div style="font-size:0.75rem; color:#a1a1aa; margin-bottom:0.35rem;">
+              Payment Status: <strong style="color:#f59e0b;">Screenshot submitted – verification pending</strong>
+            </div>
+            <div style="font-size:0.7rem; color:#71717a; line-height:1.4;">
+              Tap download below to save this proof, then attach it to the WhatsApp message before pressing send.
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn-download-screenshot" id="success-download-screenshot-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          DOWNLOAD PAYMENT SCREENSHOT
+        </button>
       </div>
 
       <a href="#" target="_blank" rel="noopener noreferrer" class="btn-confirm-wa" id="success-whatsapp-btn">
@@ -1237,7 +1282,7 @@
           <path
             d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.966.527 1.93.811 2.796.811 3.181 0 5.767-2.587 5.768-5.766.001-3.181-2.585-5.798-5.768-5.798zm3.385 8.163c-.145.408-.847.781-1.183.829-.336.048-.775.068-2.223-.529-1.854-.764-3.04-2.653-3.132-2.775-.093-.122-.749-.997-.749-1.902 0-.904.472-1.349.64-1.533.168-.184.368-.23.491-.23.123 0 .245.001.353.007.113.005.263-.043.412.316.153.368.522 1.272.568 1.365.046.092.077.2.015.323-.061.123-.092.2-.184.307-.092.107-.194.24-.277.323-.092.092-.189.193-.081.378.107.185.477.787 1.025 1.275.707.63 1.303.825 1.488.917.184.092.292.077.4-.046.108-.123.461-.537.584-.722.123-.184.246-.153.414-.092.169.061 1.074.507 1.258.6.184.092.307.138.353.215.046.077.046.446-.099.854z" />
         </svg>
-        CONFIRM ORDER ON WHATSAPP
+        SEND ORDER TO WHATSAPP
       </a>
 
       <button type="button" class="btn btn-silver btn-full" id="success-continue-btn" style="min-height:48px;">

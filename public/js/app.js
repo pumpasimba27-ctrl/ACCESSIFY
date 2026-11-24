@@ -37,7 +37,7 @@
 
   // Payment configuration cache
   let paymentConfig = {
-    upiId: '7012400815@upi',
+    upiId: 'renjudinob@okaxis',
     upiName: 'ACCESSIFY',
     whatsappNumber: '917012400815',
     deliveryCharge: 99,
@@ -155,7 +155,12 @@
     successCustName: document.getElementById('success-cust-name'),
     successCustPhone: document.getElementById('success-cust-phone'),
     successCustAddress: document.getElementById('success-cust-address'),
+    successProductsContainer: document.getElementById('success-products-container'),
+    successSubtotal: document.getElementById('success-subtotal'),
+    successDelivery: document.getElementById('success-delivery'),
     successOrderTotal: document.getElementById('success-order-total'),
+    successScreenshotThumb: document.getElementById('success-screenshot-thumb'),
+    successDownloadScreenshotBtn: document.getElementById('success-download-screenshot-btn'),
     successWhatsappBtn: document.getElementById('success-whatsapp-btn'),
     successContinueBtn: document.getElementById('success-continue-btn'),
 
@@ -995,6 +1000,7 @@ Please provide more details about availability and ordering.`;
       cart.push({
         id: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         productId: product.id,
+        slug: product.slug || product.id,
         name: product.name,
         variant: chosenVariant,
         price: Number(product.price),
@@ -1291,31 +1297,46 @@ Please provide more details about availability and ordering.`;
         }));
       } catch (_) { }
 
-      // 4. Construct WhatsApp Order Notification Message
+      // 4. Construct WhatsApp Order Notification Message with Direct Product Links
+      const origin = window.location.origin || 'https://accessify-xi.vercel.app';
       const itemsListFormatted = createdOrder.items.map(it => {
-        const varTxt = it.variant ? ` (Variant: ${it.variant})` : '';
-        return `- ${it.qty}x ${it.name}${varTxt} - ₹${Number(it.total || (it.price * it.qty)).toLocaleString('en-IN')}`;
-      }).join('\n');
+        const varTxt = it.variant ? ` (${it.variant})` : '';
+        const prodSlug = it.slug || it.productId || it.id || '';
+        const prodUrl = `${origin}/product/${encodeURIComponent(prodSlug)}`;
+        return `${it.name}${varTxt}\nQuantity: ${it.qty}\nPrice: ₹${Number(it.price).toLocaleString('en-IN')}\nProduct Link: ${prodUrl}`;
+      }).join('\n\n');
+
+      const fullAddress = [createdOrder.house, createdOrder.street, createdOrder.city, createdOrder.state].filter(Boolean).join(', ');
 
       const waMsg =
-        `💎 NEW ORDER RECEIVED - ACCESSIFY 💎
+`💎 NEW WEBSITE ORDER 💎
 
 Order ID: ${createdOrder.order_number}
-Customer: ${createdOrder.customer_name}
-Phone: ${createdOrder.customer_phone}
-Address: ${createdOrder.shipping_address}
 
-Products Ordered:
+CUSTOMER DETAILS
+Name: ${createdOrder.customer_name}
+Phone: ${createdOrder.customer_phone}
+
+DELIVERY ADDRESS
+${fullAddress}
+PIN Code: ${createdOrder.pincode || '—'}
+Landmark: ${createdOrder.landmark || 'None'}
+
+ORDERED PRODUCTS:
+
 ${itemsListFormatted}
 
-Items Subtotal: ₹${Number(createdOrder.subtotal).toLocaleString('en-IN')}
-Delivery: ${createdOrder.delivery_charge > 0 ? '₹' + createdOrder.delivery_charge : 'Free'}
-Total Amount: ₹${Number(createdOrder.total_amount).toLocaleString('en-IN')}
+PAYMENT SUMMARY
+Product Subtotal: ₹${Number(createdOrder.subtotal).toLocaleString('en-IN')}
+Delivery Charge: ₹99
+Grand Total: ₹${Number(createdOrder.total_amount).toLocaleString('en-IN')}
 
 Payment Method: UPI
-Payment Status: Payment Screenshot Submitted (Verification Pending)
+UPI ID: ${paymentConfig.upiId || 'renjudinob@okaxis'}
+Payment Status: Screenshot submitted – verification pending
 
-Thank you! I have uploaded the payment screenshot on the website. Please confirm my order.`;
+📸 PAYMENT SCREENSHOT
+Customer will attach the payment screenshot manually before sending this WhatsApp message.`;
 
       // Target WhatsApp: strictly +917012400815
       let targetWaNumber = (paymentConfig.whatsappNumber || '917012400815').trim();
@@ -1324,13 +1345,16 @@ Thank you! I have uploaded the payment screenshot on the website. Please confirm
       }
       const waUrl = `https://wa.me/${targetWaNumber}?text=${encodeURIComponent(waMsg)}`;
 
-      // 5. Clear cart
+      // 5. Retain reference to uploaded file for instant download
+      const uploadedFileRef = checkoutScreenshotFile;
+
+      // Clear cart
       clearCart();
       removeScreenshot();
       closeCheckoutModal();
 
-      // 6. Show Success Screen
-      openOrderSuccessModal(createdOrder, waUrl);
+      // 6. Show Success Screen with direct product links and download button
+      openOrderSuccessModal(createdOrder, waUrl, uploadedFileRef);
 
       // Automatically launch WhatsApp window/tab
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -1351,12 +1375,52 @@ Thank you! I have uploaded the payment screenshot on the website. Please confirm
     }
   }
 
-  function openOrderSuccessModal(order, waUrl) {
+  function openOrderSuccessModal(order, waUrl, fileObj) {
     if (el.successOrderId) el.successOrderId.textContent = order.order_number;
     if (el.successCustName) el.successCustName.textContent = order.customer_name;
     if (el.successCustPhone) el.successCustPhone.textContent = order.customer_phone;
     if (el.successCustAddress) el.successCustAddress.textContent = order.shipping_address;
+    if (el.successSubtotal) el.successSubtotal.textContent = `₹${Number(order.subtotal).toLocaleString('en-IN')}`;
+    if (el.successDelivery) el.successDelivery.textContent = `₹${Number(order.delivery_charge || 99).toLocaleString('en-IN')}`;
     if (el.successOrderTotal) el.successOrderTotal.textContent = `₹${Number(order.total_amount).toLocaleString('en-IN')}`;
+
+    // Render ordered products with direct clickable links
+    if (el.successProductsContainer) {
+      const origin = window.location.origin || 'https://accessify-xi.vercel.app';
+      el.successProductsContainer.innerHTML = (order.items || []).map(it => {
+        const prodSlug = it.slug || it.productId || it.id || '';
+        const prodUrl = `${origin}/product/${encodeURIComponent(prodSlug)}`;
+        const varTxt = it.variant ? `<span style="color:#d4d4d8;"> &bull; ${escapeHtml(it.variant)}</span>` : '';
+        return `
+          <div class="success-prod-card">
+            <div class="success-prod-info">
+              <div class="success-prod-name">${escapeHtml(it.name)}${varTxt}</div>
+              <div class="success-prod-meta">Quantity: <strong>${it.qty}</strong> &bull; Price: ₹${Number(it.price).toLocaleString('en-IN')}</div>
+              <a href="${prodUrl}" target="_blank" rel="noopener noreferrer" class="success-prod-link">
+                ${prodUrl} ↗
+              </a>
+            </div>
+            <div style="font-weight:700; color:#ffffff; font-family:var(--font-mono, monospace); font-size:0.85rem;">
+              ₹${Number(it.total || (it.price * it.qty)).toLocaleString('en-IN')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Set screenshot preview & lightbox
+    const screenshotSrc = order.payment_screenshot || '';
+    if (el.successScreenshotThumb) {
+      el.successScreenshotThumb.src = screenshotSrc;
+      el.successScreenshotThumb.onclick = () => openLightbox(screenshotSrc);
+    }
+
+    // Configure Download Screenshot button
+    if (el.successDownloadScreenshotBtn) {
+      el.successDownloadScreenshotBtn.onclick = () => {
+        downloadScreenshot(order, fileObj);
+      };
+    }
 
     if (el.successWhatsappBtn) {
       el.successWhatsappBtn.href = waUrl;
@@ -1366,6 +1430,41 @@ Thank you! I have uploaded the payment screenshot on the website. Please confirm
       el.orderSuccessBackdrop.classList.add('open');
       el.orderSuccessBackdrop.setAttribute('aria-hidden', 'false');
       document.body.classList.add('success-open');
+    }
+  }
+
+  function downloadScreenshot(order, fileObj) {
+    const filename = `ACCESSIFY-Payment-${order.order_number || 'order'}.jpg`;
+    if (fileObj) {
+      const blobUrl = URL.createObjectURL(fileObj);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+      showToast('Screenshot downloaded! Please attach it to WhatsApp message.');
+      return;
+    }
+
+    if (order.payment_screenshot) {
+      fetch(order.payment_screenshot)
+        .then(r => r.blob())
+        .then(blob => {
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+          showToast('Screenshot downloaded! Please attach it to WhatsApp message.');
+        })
+        .catch(() => {
+          window.open(order.payment_screenshot, '_blank');
+        });
     }
   }
 

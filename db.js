@@ -519,7 +519,7 @@ async function seedInitialDataIfEmpty() {
   const defaultSettings = [
     ['store_name', 'ACCESSIFY'],
     ['whatsapp_number', '917012400815'],
-    ['upi_id', '7012400815@upi'],
+    ['upi_id', 'renjudinob@okaxis'],
     ['upi_name', 'ACCESSIFY'],
     ['delivery_charge', '99'],
     ['upi_qr_image', '/assets/images/upi-qr.png']
@@ -1420,6 +1420,7 @@ export async function createPublicOrder(data) {
     let productName = String(item.name || 'Jewellery Piece').trim();
     let variant = String(item.variant || '').trim();
     let image = String(item.image || '').trim();
+    let slug = item.slug || item.productId || item.id || null;
 
     const prodLookup = item.productId || item.id;
     if (prodLookup) {
@@ -1427,6 +1428,7 @@ export async function createPublicOrder(data) {
       if (dbProd && dbProd.product) {
         unitPrice = Number(dbProd.product.price);
         productName = dbProd.product.name;
+        slug = dbProd.product.slug || dbProd.product.id || slug;
         if (!image && Array.isArray(dbProd.product.images) && dbProd.product.images.length > 0) {
           image = dbProd.product.images[0];
         }
@@ -1437,6 +1439,7 @@ export async function createPublicOrder(data) {
     calculatedSubtotal += itemTotal;
     validatedItems.push({
       productId: item.productId || item.id || null,
+      slug,
       name: productName,
       variant: variant || undefined,
       qty,

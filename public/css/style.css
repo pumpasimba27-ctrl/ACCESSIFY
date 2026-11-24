@@ -3840,6 +3840,135 @@ body.show-gateway .section-gateway,
   font-size: 0.95rem;
 }
 
+.success-instruction-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 4px;
+  padding: 0.85rem 1rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #fbbf24;
+  margin-bottom: 1.25rem;
+  text-align: left;
+}
+
+.success-section-header {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.35rem;
+}
+
+.success-products-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.success-prod-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+}
+
+.success-prod-info {
+  flex: 1;
+}
+
+.success-prod-name {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 0.82rem;
+  margin-bottom: 0.2rem;
+}
+
+.success-prod-meta {
+  font-size: 0.72rem;
+  color: #a1a1aa;
+  margin-bottom: 0.35rem;
+}
+
+.success-prod-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: #6ee7b7;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  letter-spacing: 0.03em;
+  word-break: break-all;
+}
+
+.success-prod-link:hover {
+  color: #a7f3d0;
+}
+
+.success-screenshot-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.success-screenshot-thumb {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+  background: #18181b;
+}
+
+.success-screenshot-thumb:hover {
+  transform: scale(1.05);
+  border-color: #ffffff;
+}
+
+.btn-download-screenshot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 46px;
+  background: #18181b;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-download-screenshot:hover {
+  background: #27272a;
+  border-color: #ffffff;
+  color: #6ee7b7;
+}
+
 .btn-confirm-wa {
   display: flex;
   align-items: center;
