@@ -522,7 +522,7 @@ async function seedInitialDataIfEmpty() {
     ['upi_id', 'renjudinob@okaxis'],
     ['upi_name', 'ACCESSIFY'],
     ['delivery_charge', '99'],
-    ['upi_qr_image', '/assets/images/upi-qr.png']
+    ['upi_qr_image', '/api/upi-qr']
   ];
   for (const [key, val] of defaultSettings) {
     try {

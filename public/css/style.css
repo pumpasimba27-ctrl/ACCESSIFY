@@ -3595,8 +3595,8 @@ body.show-gateway .section-gateway,
 }
 
 .upi-qr-image-wrap {
-  width: 250px;
-  max-width: 100%;
+  width: 220px;
+  height: 220px;
   background: #ffffff;
   padding: 8px;
   border-radius: 8px;
@@ -3606,9 +3606,34 @@ body.show-gateway .section-gateway,
 
 .upi-qr-image-wrap img {
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: contain;
   display: block;
-  border-radius: 4px;
+}
+
+.upi-payee-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 0.35rem 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.upi-payee-label {
+  font-size: 0.65rem;
+  color: #71717a;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.upi-payee-name {
+  font-size: 0.82rem;
+  color: #ffffff;
+  font-weight: 900;
+  letter-spacing: 0.12em;
 }
 
 .upi-id-row {

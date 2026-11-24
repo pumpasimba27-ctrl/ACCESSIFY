@@ -1113,8 +1113,13 @@
                 </div>
 
                 <div class="upi-qr-display-box">
+                  <div class="upi-payee-badge">
+                    <span class="upi-payee-label">PAY TO</span>
+                    <span class="upi-payee-name">ACCESSIFY</span>
+                  </div>
                   <div class="upi-qr-image-wrap">
-                    <img id="checkout-upi-qr-img" src="/assets/images/renjudinob-upi-qr.jpg" alt="ACCESSIFY UPI Payment QR">
+                    <img id="checkout-upi-qr-img" src="/api/upi-qr?name=ACCESSIFY&upi_id=renjudinob@okaxis"
+                      alt="ACCESSIFY UPI Payment QR">
                   </div>
                   <span style="font-size:0.75rem; color:#a1a1aa; letter-spacing:0.04em;">
                     SCAN WITH ANY UPI APP (GPAY / PHONEPE / PAYTM / CRED / BHIM)
@@ -1123,9 +1128,12 @@
 
                 <div class="upi-id-row">
                   <div>
-                    <span style="font-size:0.68rem; color:#71717a; display:block; text-transform:uppercase;">Account Name</span>
-                    <span style="color:#ffffff; font-weight:700; font-size:0.88rem; letter-spacing:0.04em; display:block; margin-bottom:0.35rem;">ACCESSIFY</span>
-                    <span style="font-size:0.68rem; color:#71717a; display:block; text-transform:uppercase;">UPI ID</span>
+                    <span style="font-size:0.68rem; color:#71717a; display:block; text-transform:uppercase;">Account
+                      Name</span>
+                    <span
+                      style="color:#ffffff; font-weight:700; font-size:0.88rem; letter-spacing:0.04em; display:block; margin-bottom:0.35rem;">ACCESSIFY</span>
+                    <span style="font-size:0.68rem; color:#71717a; display:block; text-transform:uppercase;">UPI
+                      ID</span>
                     <span class="upi-id-text" id="checkout-upi-id-text">renjudinob@okaxis</span>
                   </div>
                   <button type="button" class="btn-copy-chip" id="btn-copy-upi-id">
@@ -1319,7 +1327,7 @@
         const pill = document.querySelector(`[data-cat="${cat}"]`);
         if (pill) pill.click();
         constarocument.getElementById('catalog');
-        if (target) target.scrolntobehavior: 'smooth' });
+        if (target) target.rolvior: 'smooth' });
       };
     }
   </script>

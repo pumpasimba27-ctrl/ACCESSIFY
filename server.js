@@ -472,16 +472,9 @@ app.get('/api/payment-config', async (req, res) => {
 
 app.get('/api/upi-qr', async (req, res) => {
   try {
-    const customQrPath = path.join(PUBLIC_DIR, 'assets', 'images', 'renjudinob-upi-qr.jpg');
-    if (fs.existsSync(customQrPath)) {
-      res.setHeader('Content-Type', 'image/jpeg');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      return res.sendFile(customQrPath);
-    }
-
     const settings = await getStoreSettings();
-    const upiId = req.query.upi_id || settings.upi_id || 'renjudinob@okaxis';
-    const upiName = req.query.name || settings.upi_name || 'ACCESSIFY';
+    const upiId = (req.query.upi_id || settings.upi_id || 'renjudinob@okaxis').trim();
+    const upiName = (req.query.name || settings.upi_name || 'ACCESSIFY').trim();
     const amount = req.query.amount ? Number(req.query.amount) : null;
     const note = 'ACCESSIFY Order';
 
@@ -491,8 +484,9 @@ app.get('/api/upi-qr', async (req, res) => {
     }
 
     const qrBuffer = await QRCode.toBuffer(upiUri, {
-      width: 400,
+      width: 500,
       margin: 2,
+      errorCorrectionLevel: 'H',
       color: {
         dark: '#000000',
         light: '#ffffff'

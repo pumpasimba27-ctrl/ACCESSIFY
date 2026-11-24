@@ -1122,9 +1122,9 @@ Please provide more details about availability and ordering.`;
       el.checkoutPayableAmount.textContent = `₹${totalAmount.toLocaleString('en-IN')}`;
     }
 
-    // Set exact original QR image directly from public assets
+    // Set dynamically generated QR with exact order amount and payee name ACCESSIFY
     if (el.checkoutUpiQrImg) {
-      el.checkoutUpiQrImg.src = paymentConfig.qrImage || '/assets/images/renjudinob-upi-qr.jpg';
+      el.checkoutUpiQrImg.src = `${API_BASE}/upi-qr?amount=${totalAmount}&upi_id=${encodeURIComponent(paymentConfig.upiId || 'renjudinob@okaxis')}&name=ACCESSIFY&t=${Date.now()}`;
     }
 
     // Set UPI ID
