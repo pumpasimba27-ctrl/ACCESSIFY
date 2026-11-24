@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import sharp from 'sharp';
 import { put as putVercelBlob } from '@vercel/blob';
+import QRCode from 'qrcode';
 import {
   ensureInitialized,
   getDbMode,
@@ -31,6 +32,7 @@ import {
   deleteCategory,
   getOrders,
   createOrder,
+  createPublicOrder,
   updateOrder,
   deleteOrder,
   getCustomers,
@@ -442,6 +444,133 @@ app.get('/api/banners', async (req, res) => {
     settings,
     dbVersion
   });
+});
+
+// -------------------------------------------------------------
+// PUBLIC CHECKOUT, UPI PAYMENT & ORDER PLACEMENT
+// -------------------------------------------------------------
+app.get('/api/payment-config', async (req, res) => {
+  try {
+    const settings = await getStoreSettings();
+    res.json({
+      success: true,
+      upiId: settings.upi_id || '7012400815@upi',
+      upiName: settings.upi_name || 'ACCESSIFY',
+      whatsappNumber: settings.whatsapp_number || '917012408015',
+      deliveryCharge: Number(settings.delivery_charge || 0),
+      qrImage: settings.upi_qr_image || '/assets/images/upi-qr.png'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/upi-qr', async (req, res) => {
+  try {
+    const settings = await getStoreSettings();
+    const upiId = req.query.upi_id || settings.upi_id || '7012400815@upi';
+    const upiName = req.query.name || settings.upi_name || 'ACCESSIFY';
+    const amount = req.query.amount ? Number(req.query.amount) : null;
+    const note = 'ACCESSIFY Order';
+
+    let upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(upiName)}&cu=INR&tn=${encodeURIComponent(note)}`;
+    if (amount && !isNaN(amount) && amount > 0) {
+      upiUri += `&am=${amount.toFixed(2)}`;
+    }
+
+    const qrBuffer = await QRCode.toBuffer(upiUri, {
+      width: 400,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    });
+
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(qrBuffer);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/upload-payment-proof', upload.single('screenshot'), async (req, res) => {
+  try {
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ success: false, error: 'No image file uploaded' });
+    }
+    if (!isValidImageBuffer(req.file.buffer)) {
+      return res.status(400).json({ success: false, error: 'Uploaded file is not a valid image' });
+    }
+
+    let ext = path.extname(req.file.originalname || '').toLowerCase().replace('.', '');
+    if (!ext || !ALLOWED_IMAGE_EXT.test(ext)) ext = 'jpg';
+    let filename = `proof-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
+    let mimeType = req.file.mimetype || (ext === 'png' ? 'image/png' : 'image/jpeg');
+
+    let finalBuffer = req.file.buffer;
+    try {
+      if (sharp) {
+        finalBuffer = await sharp(req.file.buffer)
+          .rotate()
+          .resize({ width: 1400, height: 1800, fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+        filename = `proof-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.jpg`;
+        mimeType = 'image/jpeg';
+      }
+    } catch (_) {}
+
+    // Save to disk targets
+    const localTargets = [
+      path.join(UPLOADS_DIR, filename),
+      path.join(PUBLIC_DIR, 'uploads', filename),
+      path.join(TMP_UPLOADS, filename)
+    ];
+    for (const target of localTargets) {
+      try {
+        const dir = path.dirname(target);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(target, finalBuffer);
+      } catch (_) {}
+    }
+
+    // Persist to database product_assets for cloud/Vercel persistence
+    try {
+      await saveAsset({ filename, mime_type: mimeType, data: finalBuffer });
+    } catch (err) {
+      console.warn('[Upload] Failed persisting proof to DB:', err.message);
+    }
+
+    const publicUrl = `/uploads/${filename}`;
+    res.status(201).json({
+      success: true,
+      url: publicUrl,
+      filename
+    });
+  } catch (err) {
+    console.error('[Upload] Payment proof upload error:', err);
+    res.status(500).json({ success: false, error: err.message || 'Failed to upload payment screenshot' });
+  }
+});
+
+app.post('/api/orders', async (req, res) => {
+  try {
+    const order = await createPublicOrder(req.body || {});
+    const dbVersion = await broadcastEvent('order_created', { order });
+    res.status(201).json({
+      success: true,
+      message: 'Order created successfully',
+      data: order,
+      dbVersion
+    });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      error: err.message || 'Failed to place order'
+    });
+  }
 });
 
 // -------------------------------------------------------------

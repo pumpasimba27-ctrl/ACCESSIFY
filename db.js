@@ -448,6 +448,17 @@ async function ensureSchema() {
     await execute("UPDATE products SET section = 'accessories' WHERE section IS NULL OR section = ''");
     await execute("UPDATE categories SET section = 'accessories' WHERE section IS NULL OR section = ''");
   } catch (_) {}
+
+  // Safe migrations for enhanced orders & checkout fields
+  try { await execute("ALTER TABLE orders ADD COLUMN payment_screenshot TEXT DEFAULT ''"); } catch (_) {}
+  try { await execute("ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT 'upi'"); } catch (_) {}
+  try { await execute("ALTER TABLE orders ADD COLUMN delivery_charge REAL DEFAULT 0"); } catch (_) {}
+  try { await execute("ALTER TABLE orders ADD COLUMN house TEXT DEFAULT ''"); } catch (_) {}
+  try { await execute("ALTER TABLE orders ADD COLUMN street TEXT DEFAULT ''"); } catch (_) {}
+  try { await execute("ALTER TABLE orders ADD COLUMN city TEXT DEFAULT ''"); } catch (_) {}
+  try { await execute("ALTER TABLE orders ADD COLUMN state TEXT DEFAULT ''"); } catch (_) {}
+  try { await execute("ALTER TABLE orders ADD COLUMN pincode TEXT DEFAULT ''"); } catch (_) {}
+  try { await execute("ALTER TABLE orders ADD COLUMN landmark TEXT DEFAULT ''"); } catch (_) {}
 }
 
 async function seedInitialDataIfEmpty() {
@@ -502,6 +513,21 @@ async function seedInitialDataIfEmpty() {
       `INSERT OR IGNORE INTO settings (key, value) VALUES ('session_secret', ?)`,
       [newSecret]
     );
+  }
+
+  // Seed default store & UPI settings if missing
+  const defaultSettings = [
+    ['store_name', 'ACCESSIFY'],
+    ['whatsapp_number', '917012408015'],
+    ['upi_id', '7012400815@upi'],
+    ['upi_name', 'ACCESSIFY'],
+    ['delivery_charge', '0'],
+    ['upi_qr_image', '/assets/images/upi-qr.png']
+  ];
+  for (const [key, val] of defaultSettings) {
+    try {
+      await execute(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`, [key, val]);
+    } catch (_) {}
   }
 
   // 4. Seed products ONLY when products table is empty (preserve all existing data!)
@@ -1213,7 +1239,8 @@ export async function createOrder(data) {
   const items = Array.isArray(data.items) ? data.items : [];
   const subtotal = data.subtotal !== undefined ? Number(data.subtotal) : items.reduce((s, it) => s + (Number(it.price || 0) * Number(it.qty || 1)), 0);
   const discount = Number(data.discount_amount) || 0;
-  const total = data.total_amount !== undefined && data.total_amount !== '' ? Number(data.total_amount) : Math.max(0, subtotal - discount);
+  const deliveryCharge = Number(data.delivery_charge || 0);
+  const total = data.total_amount !== undefined && data.total_amount !== '' ? Number(data.total_amount) : Math.max(0, subtotal - discount + deliveryCharge);
 
   // Automatically create/find customer record if phone or email is supplied
   let customerId = data.customer_id || null;
@@ -1238,9 +1265,10 @@ export async function createOrder(data) {
   await execute(`
     INSERT INTO orders (
       id, order_number, customer_id, customer_name, customer_phone, customer_email,
-      shipping_address, items, subtotal, discount_amount, total_amount,
-      payment_status, order_status, source, notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      shipping_address, house, street, city, state, pincode, landmark,
+      items, subtotal, discount_amount, delivery_charge, total_amount,
+      payment_method, payment_status, payment_screenshot, order_status, source, notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     id,
     orderNumber,
@@ -1249,11 +1277,20 @@ export async function createOrder(data) {
     data.customer_phone || '',
     data.customer_email || '',
     data.shipping_address || '',
+    data.house || '',
+    data.street || '',
+    data.city || '',
+    data.state || '',
+    data.pincode || '',
+    data.landmark || '',
     JSON.stringify(items),
     subtotal,
     discount,
+    deliveryCharge,
     total,
+    data.payment_method || 'upi',
     data.payment_status || 'pending',
+    data.payment_screenshot || '',
     data.order_status || 'pending',
     data.source || 'whatsapp',
     data.notes || ''
@@ -1274,6 +1311,7 @@ export async function updateOrder(id, data) {
   const total = data.total_amount !== undefined ? Number(data.total_amount) : current.total_amount;
   const subtotal = data.subtotal !== undefined ? Number(data.subtotal) : current.subtotal;
   const discount = data.discount_amount !== undefined ? Number(data.discount_amount) : current.discount_amount;
+  const deliveryCharge = data.delivery_charge !== undefined ? Number(data.delivery_charge) : (current.delivery_charge || 0);
 
   await execute(`
     UPDATE orders SET
@@ -1281,11 +1319,20 @@ export async function updateOrder(id, data) {
       customer_phone = ?,
       customer_email = ?,
       shipping_address = ?,
+      house = ?,
+      street = ?,
+      city = ?,
+      state = ?,
+      pincode = ?,
+      landmark = ?,
       items = ?,
       subtotal = ?,
       discount_amount = ?,
+      delivery_charge = ?,
       total_amount = ?,
+      payment_method = ?,
       payment_status = ?,
+      payment_screenshot = ?,
       order_status = ?,
       source = ?,
       notes = ?,
@@ -1296,11 +1343,20 @@ export async function updateOrder(id, data) {
     data.customer_phone !== undefined ? data.customer_phone : current.customer_phone,
     data.customer_email !== undefined ? data.customer_email : current.customer_email,
     data.shipping_address !== undefined ? data.shipping_address : current.shipping_address,
+    data.house !== undefined ? data.house : (current.house || ''),
+    data.street !== undefined ? data.street : (current.street || ''),
+    data.city !== undefined ? data.city : (current.city || ''),
+    data.state !== undefined ? data.state : (current.state || ''),
+    data.pincode !== undefined ? data.pincode : (current.pincode || ''),
+    data.landmark !== undefined ? data.landmark : (current.landmark || ''),
     items,
     subtotal,
     discount,
+    deliveryCharge,
     total,
+    data.payment_method !== undefined ? data.payment_method : (current.payment_method || 'upi'),
     data.payment_status !== undefined ? data.payment_status : current.payment_status,
+    data.payment_screenshot !== undefined ? data.payment_screenshot : (current.payment_screenshot || ''),
     data.order_status !== undefined ? data.order_status : current.order_status,
     data.source !== undefined ? data.source : current.source,
     data.notes !== undefined ? data.notes : current.notes,
@@ -1321,6 +1377,150 @@ export async function deleteOrder(id) {
   await logAudit('DELETE_ORDER', `Deleted order ${current.order_number} (${id})`);
   await bumpVersion();
   return true;
+}
+
+export async function createPublicOrder(data) {
+  await ensureInitialized();
+  const name = String(data.customer_name || '').trim();
+  const phone = String(data.customer_phone || '').trim().replace(/\D/g, '');
+  const email = String(data.customer_email || '').trim();
+  const house = String(data.house || '').trim();
+  const street = String(data.street || '').trim();
+  const city = String(data.city || '').trim();
+  const state = String(data.state || '').trim();
+  const pincode = String(data.pincode || '').trim();
+  const landmark = String(data.landmark || '').trim();
+  const screenshot = String(data.payment_screenshot || '').trim();
+
+  if (!name) throw new Error('Customer full name is required');
+  if (!phone || phone.length < 10) throw new Error('A valid 10-digit mobile/WhatsApp number is required');
+  if (!house) throw new Error('House / flat / building name or number is required');
+  if (!street) throw new Error('Street / area / locality is required');
+  if (!city) throw new Error('City is required');
+  if (!state) throw new Error('State is required');
+  if (!pincode || pincode.length < 6) throw new Error('A valid 6-digit PIN code is required');
+  if (!screenshot) throw new Error('Payment screenshot is required to place your order');
+
+  const rawItems = Array.isArray(data.items) ? data.items : [];
+  if (rawItems.length === 0) throw new Error('Your cart is empty. Please add items before checkout.');
+
+  // Validate and recalculate authentic prices from database to prevent client manipulation
+  const validatedItems = [];
+  let calculatedSubtotal = 0;
+
+  for (const item of rawItems) {
+    const qty = Math.max(1, parseInt(item.qty, 10) || 1);
+    let unitPrice = Number(item.price || 0);
+    let productName = String(item.name || 'Jewellery Piece').trim();
+    let variant = String(item.variant || '').trim();
+    let image = String(item.image || '').trim();
+
+    const prodLookup = item.productId || item.id;
+    if (prodLookup) {
+      const dbProd = await getProductByIdOrSlug(prodLookup);
+      if (dbProd && dbProd.product) {
+        unitPrice = Number(dbProd.product.price);
+        productName = dbProd.product.name;
+        if (!image && Array.isArray(dbProd.product.images) && dbProd.product.images.length > 0) {
+          image = dbProd.product.images[0];
+        }
+      }
+    }
+
+    const itemTotal = unitPrice * qty;
+    calculatedSubtotal += itemTotal;
+    validatedItems.push({
+      productId: item.productId || item.id || null,
+      name: productName,
+      variant: variant || undefined,
+      qty,
+      price: unitPrice,
+      total: itemTotal,
+      image
+    });
+  }
+
+  // Delivery charge from settings
+  const settings = await getStoreSettings();
+  const deliveryCharge = Number(settings.delivery_charge || 0);
+  const totalAmount = calculatedSubtotal + deliveryCharge;
+
+  const id = `ord_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+  const orderNumber = `ACC-ORD-${Date.now().toString().slice(-6)}${crypto.randomBytes(1).toString('hex').toUpperCase()}`;
+
+  const shippingAddress = [
+    house,
+    street,
+    city,
+    state ? `${state} - ${pincode}` : pincode,
+    landmark ? `(Landmark: ${landmark})` : ''
+  ].filter(Boolean).join(', ');
+
+  // Customer record sync
+  let customerId = null;
+  const existingCust = await queryOne(`SELECT id FROM customers WHERE phone = ?`, [phone]);
+  if (existingCust) {
+    customerId = existingCust.id;
+    await execute(
+      `UPDATE customers SET name = ?, address = ?, city = ?, updated_at = datetime('now') WHERE id = ?`,
+      [name, shippingAddress, city, customerId]
+    );
+  } else {
+    const cust = await createCustomer({
+      name,
+      phone,
+      email,
+      address: shippingAddress,
+      city
+    });
+    customerId = cust.id;
+  }
+
+  await execute(`
+    INSERT INTO orders (
+      id, order_number, customer_id, customer_name, customer_phone, customer_email,
+      shipping_address, house, street, city, state, pincode, landmark,
+      items, subtotal, discount_amount, delivery_charge, total_amount,
+      payment_method, payment_status, payment_screenshot, order_status, source, notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    id,
+    orderNumber,
+    customerId,
+    name,
+    phone,
+    email,
+    shippingAddress,
+    house,
+    street,
+    city,
+    state,
+    pincode,
+    landmark,
+    JSON.stringify(validatedItems),
+    calculatedSubtotal,
+    0, // discount
+    deliveryCharge,
+    totalAmount,
+    'upi',
+    'screenshot_submitted', // Payment Screenshot Submitted (Verification Pending)
+    screenshot,
+    'pending',
+    'website',
+    data.notes || ''
+  ]);
+
+  await logAudit('CREATE_ORDER', `Created website order ${orderNumber} for ${name} (₹${totalAmount}) with payment screenshot`);
+  await bumpVersion();
+
+  const createdOrder = await queryOne(`SELECT * FROM orders WHERE id = ?`, [id]);
+  return {
+    ...createdOrder,
+    items: parseJsonArray(createdOrder.items),
+    subtotal: Number(createdOrder.subtotal) || 0,
+    delivery_charge: Number(createdOrder.delivery_charge) || 0,
+    total_amount: Number(createdOrder.total_amount) || 0
+  };
 }
 
 // -------------------------------------------------------------
@@ -1499,7 +1699,11 @@ export async function updateStoreSettings(updates) {
     'promo_notice',
     'instagram_url',
     'dispatch_notice',
-    'maintenance_mode'
+    'maintenance_mode',
+    'upi_id',
+    'upi_name',
+    'delivery_charge',
+    'upi_qr_image'
   ];
   const statements = [];
   for (const k of allowedKeys) {

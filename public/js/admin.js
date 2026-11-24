@@ -940,32 +940,56 @@
     }
 
     const orderStatuses = ['pending', 'confirmed', 'packed', 'shipped', 'delivered', 'cancelled'];
-    const payStatuses = ['pending', 'paid', 'refunded'];
+    const payStatuses = [
+      { val: 'pending', label: 'PENDING' },
+      { val: 'screenshot_submitted', label: 'PROOF SUBMITTED' },
+      { val: 'paid', label: 'PAID / VERIFIED' },
+      { val: 'refunded', label: 'REFUNDED' }
+    ];
 
     tbody.innerHTML = state.orders
       .map((o) => {
         const itemsSummary = Array.isArray(o.items) && o.items.length
-          ? o.items.map((it) => `${it.qty || 1}× ${it.name || 'Item'}`).join(', ')
+          ? o.items.map((it) => `${it.qty || 1}× ${it.name || 'Item'}${it.variant ? ' (' + it.variant + ')' : ''}`).join(', ')
           : 'No items listed';
+
+        const rawPhone = String(o.customer_phone || '').trim().replace(/\D/g, '');
+        const waPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
+        const hasScreenshot = Boolean(o.payment_screenshot);
+        const isProofSubmitted = o.payment_status === 'screenshot_submitted';
 
         return `
       <tr>
         <td>
           <div style="font-family:var(--font-mono);font-weight:600;">${escapeHtml(o.order_number)}</div>
-          <div style="font-size:11px;color:var(--text-muted);">${escapeHtml(formatDateTime(o.created_at))} • ${escapeHtml(o.source || 'whatsapp')}</div>
+          <div style="font-size:11px;color:var(--text-muted);">${escapeHtml(formatDateTime(o.created_at))} • ${escapeHtml(o.source || 'website')}</div>
         </td>
-        <td>
-          <div style="font-weight:600;">${escapeHtml(o.customer_name)}</div>
-          <div style="font-size:12px;color:var(--text-secondary);">${escapeHtml(o.customer_phone || o.customer_email || '—')}</div>
+        <td style="max-width:240px;">
+          <div style="font-weight:700; color:#fff;">${escapeHtml(o.customer_name)}</div>
+          <div style="font-size:12px;color:var(--text-secondary); margin-bottom:4px;">${escapeHtml(o.customer_phone || '—')}</div>
+          ${o.shipping_address ? `<div style="font-size:11px; color:var(--text-muted); line-height:1.3; margin-bottom:6px; word-break:break-word;">${escapeHtml(o.shipping_address)}</div>` : ''}
+          <div style="display:flex; gap:4px; flex-wrap:wrap;">
+            ${rawPhone ? `<button type="button" class="btn btn-secondary btn-xs" data-copy-phone="${escapeHtml(rawPhone)}" title="Copy phone number">Copy Phone</button>` : ''}
+            ${rawPhone ? `<a href="https://wa.me/${escapeHtml(waPhone)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-xs" style="color:#25D366; text-decoration:none; display:inline-flex; align-items:center; gap:2px;">Chat WA</a>` : ''}
+          </div>
         </td>
         <td style="max-width:220px;font-size:12px;color:var(--text-secondary);">${escapeHtml(itemsSummary)}</td>
         <td style="font-family:var(--font-mono);font-weight:600;">${formatINR(o.total_amount)}</td>
         <td>
-          <select class="form-control" style="padding:5px 8px;font-size:12px;" data-order-pay="${escapeHtml(o.id)}">
+          <select class="form-control" style="padding:5px 8px;font-size:12px; margin-bottom:4px;" data-order-pay="${escapeHtml(o.id)}">
             ${payStatuses
-            .map((ps) => `<option value="${ps}" ${o.payment_status === ps ? 'selected' : ''}>${ps.toUpperCase()}</option>`)
+            .map((ps) => `<option value="${ps.val}" ${o.payment_status === ps.val ? 'selected' : ''}>${ps.label}</option>`)
             .join('')}
           </select>
+          ${hasScreenshot ? `
+            <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+              <img src="${escapeHtml(o.payment_screenshot)}" class="order-proof-thumb" data-view-proof="${escapeHtml(o.payment_screenshot)}" style="width:36px; height:36px; object-fit:cover; border-radius:3px; cursor:pointer; border:1px solid var(--border-color);" title="Click to view payment proof" />
+              <button type="button" class="btn btn-secondary btn-xs" data-view-proof="${escapeHtml(o.payment_screenshot)}" style="font-size:10px; padding:2px 5px;">View Proof</button>
+            </div>
+          ` : '<span style="font-size:10px; color:var(--text-muted);">No screenshot</span>'}
+          ${isProofSubmitted ? `
+            <button type="button" class="btn btn-primary btn-xs" data-quick-verify-pay="${escapeHtml(o.id)}" style="margin-top:4px; width:100%; font-size:10px; padding:3px 6px;">✓ Verify Payment</button>
+          ` : ''}
         </td>
         <td>
           <select class="form-control" style="padding:5px 8px;font-size:12px;" data-order-stat="${escapeHtml(o.id)}">
@@ -1045,6 +1069,22 @@
     $('ord-discount').value = order ? Number(order.discount_amount ?? 0) : 0;
     $('ord-total').value = order ? Number(order.total_amount ?? 0) : 0;
     $('order-modal-title').textContent = order ? `Edit Order: ${order.order_number}` : 'Create Order';
+
+    const prevEl = $('ord-screenshot-preview');
+    if (prevEl) {
+      if (order && order.payment_screenshot) {
+        prevEl.innerHTML = `
+          <img src="${escapeHtml(order.payment_screenshot)}" style="width:60px; height:60px; object-fit:cover; border-radius:4px; cursor:pointer; border:1px solid var(--border-color);" data-view-proof="${escapeHtml(order.payment_screenshot)}" title="Click to view full size" />
+          <div style="flex:1;">
+            <div style="font-weight:700; font-size:12px; color:#fff;">Payment Proof Uploaded</div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Status: ${escapeHtml(order.payment_status || 'screenshot_submitted')}</div>
+            <a href="${escapeHtml(order.payment_screenshot)}" target="_blank" rel="noopener noreferrer" style="font-size:11px; color:#60a5fa; text-decoration:none; display:inline-block; margin-top:4px;">Open full size in new tab ↗</a>
+          </div>
+        `;
+      } else {
+        prevEl.innerHTML = `<span style="font-size:12px; color:var(--text-muted);">No payment screenshot attached for this order</span>`;
+      }
+    }
 
     openModal('order-modal');
   }
@@ -1811,6 +1851,44 @@
     });
 
     $('orders-tbody').addEventListener('click', (e) => {
+      // Copy phone quick action
+      const copyPhone = e.target.closest('[data-copy-phone]')?.dataset.copyPhone;
+      if (copyPhone) {
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(copyPhone).then(() => {
+            showToast(`Copied phone: ${copyPhone}`);
+          });
+        }
+        return;
+      }
+
+      // View proof in lightbox
+      const viewProof = e.target.closest('[data-view-proof]')?.dataset.viewProof;
+      if (viewProof) {
+        const lb = $('admin-lightbox-modal');
+        const img = $('admin-lightbox-img');
+        if (lb && img) {
+          img.src = viewProof;
+          lb.classList.remove('hidden');
+        }
+        return;
+      }
+
+      // Quick verify payment
+      const quickVerifyId = e.target.closest('[data-quick-verify-pay]')?.dataset.quickVerifyPay;
+      if (quickVerifyId) {
+        apiFetch(`/api/admin/orders/${encodeURIComponent(quickVerifyId)}/status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ payment_status: 'paid' })
+        }).then(() => {
+          showToast('Payment verified successfully!');
+          return Promise.all([loadOrders(), loadDashboard()]);
+        }).catch(err => {
+          showToast(err.message || 'Verification failed', 'error');
+        });
+        return;
+      }
+
       const editId = e.target.dataset.editOrder;
       if (editId) {
         const order = state.orders.find((o) => o.id === editId);
@@ -1834,6 +1912,28 @@
             }
           }
         });
+      }
+    });
+
+    // Admin Lightbox close events
+    $('admin-lightbox-close')?.addEventListener('click', () => {
+      $('admin-lightbox-modal')?.classList.add('hidden');
+    });
+    $('admin-lightbox-modal')?.addEventListener('click', (e) => {
+      if (e.target === $('admin-lightbox-modal')) {
+        $('admin-lightbox-modal').classList.add('hidden');
+      }
+    });
+
+    $('ord-screenshot-preview')?.addEventListener('click', (e) => {
+      const viewProof = e.target.closest('[data-view-proof]')?.dataset.viewProof;
+      if (viewProof) {
+        const lb = $('admin-lightbox-modal');
+        const img = $('admin-lightbox-img');
+        if (lb && img) {
+          img.src = viewProof;
+          lb.classList.remove('hidden');
+        }
       }
     });
 
