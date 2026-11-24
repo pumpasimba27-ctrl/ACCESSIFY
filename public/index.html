@@ -37,7 +37,7 @@
   <meta http-equiv="Expires" content="0">
 
   <!-- Main Storefront Stylesheet -->
-  <link rel="stylesheet" href="/css/style.css?v=3.5">
+  <link rel="stylesheet" href="/css/style.css?v=3.6">
 </head>
 
 <body>
@@ -287,14 +287,22 @@
       <!-- Section Header Row -->
       <div class="section-header-row">
         <h2 class="section-main-heading">SHOP BY CATEGORY</h2>
-        <a href="#catalog" class="section-view-all" id="desktop-view-all-cats">
-          <span>View all</span>
-          <span style="font-size: 1rem;">→</span>
-        </a>
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+          <a href="#catalog" class="section-view-all" id="desktop-view-all-cats">
+            <span>View all</span>
+            <span style="font-size: 1rem;">→</span>
+          </a>
+          <button type="button" class="carousel-arrow-btn" id="desktop-cat-prev" aria-label="Scroll categories left" title="Scroll Left">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6" /></svg>
+          </button>
+          <button type="button" class="carousel-arrow-btn" id="desktop-cat-next" aria-label="Scroll categories right" title="Scroll Right">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6" /></svg>
+          </button>
+        </div>
       </div>
 
       <!-- 8 Square Category Cards Grid -->
-      <div class="category-card-grid">
+      <div class="category-card-grid" id="desktop-category-card-grid">
         <a href="#catalog" class="category-square-card" data-cat="chains">
           <div class="category-img-box">
             <img src="/assets/images/category-chains.jpg" alt="Chains & Necklaces" loading="lazy">
@@ -398,9 +406,22 @@
           <div class="section-label" id="categories-section-label">CURATED CATEGORIES</div>
           <h2 class="section-title" id="categories-section-title">THE ACCESSIFY VAULT</h2>
         </div>
+        <div class="categories-carousel-nav" aria-label="Category Navigation">
+          <button type="button" class="carousel-arrow-btn" id="cat-scroll-prev" aria-label="Previous categories" title="Scroll Left">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <button type="button" class="carousel-arrow-btn" id="cat-scroll-next" aria-label="Next categories" title="Scroll Right">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <div class="categories-grid" id="categories-vault-grid">
+      <div class="categories-scroll-wrapper">
+        <div class="categories-grid" id="categories-vault-grid">
         <!-- Category: Chrome Hearts -->
         <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('chrome-hearts')">
           <img src="/assets/images/category-chrome-hearts.jpg?v=3" alt="Chrome Hearts" class="category-card-img"
@@ -531,6 +552,7 @@
             </div>
           </div>
         </a>
+      </div>
       </div>
     </div>
   </section>
@@ -1306,7 +1328,7 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Storefront Engine Script -->
-  <script src="/js/app.js?v=3.5"></script>
+  <script src="/js/app.js?v=3.6"></script>
 
   <!-- Global Header Category Helper -->
   <script>

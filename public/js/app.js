@@ -361,6 +361,10 @@ Please provide more details about availability and ordering.`;
       }
       updateVaultCategoryCounts();
     }
+
+    if (typeof updateVaultArrowsFn === 'function') {
+      setTimeout(updateVaultArrowsFn, 100);
+    }
   }
 
   function updateVaultCategoryCounts() {
@@ -1622,6 +1626,104 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
   }
 
   // -------------------------------------------------------------
+  // HORIZONTAL CATEGORIES CAROUSEL CONTROLS
+  // -------------------------------------------------------------
+  let updateVaultArrowsFn = null;
+
+  function initCategoryCarousel() {
+    const grid = document.getElementById('categories-vault-grid');
+    const prevBtn = document.getElementById('cat-scroll-prev');
+    const nextBtn = document.getElementById('cat-scroll-next');
+
+    if (grid) {
+      const updateArrows = () => {
+        if (!prevBtn || !nextBtn) return;
+        const maxScroll = grid.scrollWidth - grid.clientWidth;
+        const current = grid.scrollLeft;
+        prevBtn.disabled = current <= 5;
+        prevBtn.classList.toggle('disabled', current <= 5);
+        nextBtn.disabled = current >= maxScroll - 5;
+        nextBtn.classList.toggle('disabled', current >= maxScroll - 5);
+      };
+
+      updateVaultArrowsFn = updateArrows;
+
+      grid.addEventListener('scroll', updateArrows, { passive: true });
+      window.addEventListener('resize', updateArrows, { passive: true });
+      setTimeout(updateArrows, 150);
+
+      const getScrollStep = () => Math.max(180, Math.floor(grid.clientWidth * 0.75));
+
+      prevBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        grid.scrollBy({ left: -getScrollStep(), behavior: 'smooth' });
+      });
+
+      nextBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        grid.scrollBy({ left: getScrollStep(), behavior: 'smooth' });
+      });
+
+      // Mouse drag-to-scroll on desktop
+      let isDown = false;
+      let startX = 0;
+      let scrollLeftPos = 0;
+      let dragged = 0;
+
+      grid.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        isDown = true;
+        startX = e.pageX - grid.offsetLeft;
+        scrollLeftPos = grid.scrollLeft;
+        dragged = 0;
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isDown) {
+          isDown = false;
+          grid.classList.remove('is-dragging');
+        }
+      });
+
+      grid.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        const x = e.pageX - grid.offsetLeft;
+        const walk = (x - startX);
+        dragged = Math.abs(walk);
+        if (dragged > 5) {
+          grid.classList.add('is-dragging');
+          e.preventDefault();
+          grid.scrollLeft = scrollLeftPos - walk;
+        }
+      });
+
+      // Prevent category click if the user was dragging
+      grid.addEventListener('click', (e) => {
+        if (dragged > 8) {
+          e.preventDefault();
+          e.stopPropagation();
+          dragged = 0;
+        }
+      }, true);
+    }
+
+    // Also desktop shop-by-category section if present
+    const deskGrid = document.getElementById('desktop-category-card-grid');
+    const deskPrev = document.getElementById('desktop-cat-prev');
+    const deskNext = document.getElementById('desktop-cat-next');
+    if (deskGrid) {
+      deskPrev?.addEventListener('click', (e) => {
+        e.preventDefault();
+        deskGrid.scrollBy({ left: -260, behavior: 'smooth' });
+      });
+      deskNext?.addEventListener('click', (e) => {
+        e.preventDefault();
+        deskGrid.scrollBy({ left: 260, behavior: 'smooth' });
+      });
+    }
+  }
+
+  // -------------------------------------------------------------
   // EVENT LISTENERS INITIALIZATION
   // -------------------------------------------------------------
   function initEventListeners() {
@@ -2014,6 +2116,7 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
     } catch (_) {}
 
     initEventListeners();
+    initCategoryCarousel();
     updateCartUI();
     loadPaymentConfig();
     await initSectionRouting();
