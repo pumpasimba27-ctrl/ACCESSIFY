@@ -425,48 +425,22 @@ ol {
   border-color: #25D366;
 }
 
-.header-admin-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  height: 38px;
-  padding: 0 0.875rem;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-full);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-primary);
-  transition: all var(--transition-fast);
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.header-admin-btn:hover {
-  background-color: #ffffff;
-  color: #000000;
-  border-color: #ffffff;
-}
-
-.header-admin-btn svg {
-  opacity: 0.85;
-  transition: stroke var(--transition-fast);
-}
-
-.header-admin-btn:hover svg {
-  stroke: #000000;
-}
-
-@media (max-width: 640px) {
-  .header-admin-btn span {
-    display: none;
-  }
-
-  .header-admin-btn {
-    padding: 0 0.65rem;
-  }
+.header-admin-btn,
+.mobile-admin-link,
+a[href="/admin"].header-admin-btn,
+a[href*="/admin"].header-action-btn,
+a[href*="/admin"].mobile-admin-link {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  overflow: hidden !important;
 }
 
 .pulse-dot {

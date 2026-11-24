@@ -2004,6 +2004,15 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
   // BOOTSTRAP
   // -------------------------------------------------------------
   async function init() {
+    // Purge any stale admin elements from cached DOM
+    try {
+      document.querySelectorAll('.header-admin-btn, .mobile-admin-link, a[href*="/admin"]').forEach(el => {
+        if (el.closest('.header') || el.closest('.mobile-nav-drawer') || el.classList.contains('header-admin-btn') || el.classList.contains('mobile-admin-link')) {
+          el.remove();
+        }
+      });
+    } catch (_) {}
+
     initEventListeners();
     updateCartUI();
     loadPaymentConfig();

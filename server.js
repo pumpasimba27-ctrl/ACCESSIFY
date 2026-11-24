@@ -1129,23 +1129,30 @@ app.get(/^\/admin\/.*/, (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'admin.html'));
 });
 
-app.get('/accessories', (req, res) => {
+const sendStorefrontNoCache = (res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+};
+
+app.get('/accessories', (req, res) => {
+  sendStorefrontNoCache(res);
 });
 app.get('/clothing', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  sendStorefrontNoCache(res);
 });
 app.get(/^\/product\/.*/, (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  sendStorefrontNoCache(res);
 });
 app.get(/^\/collection\/.*/, (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  sendStorefrontNoCache(res);
 });
 app.get('/', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  sendStorefrontNoCache(res);
 });
 app.use((req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  sendStorefrontNoCache(res);
 });
 
 // Start Server locally
