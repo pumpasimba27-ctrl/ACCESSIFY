@@ -1680,9 +1680,9 @@
               </div>
               <div class="bs-item-actions">
                 ${isSelected
-                  ? `<button type="button" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;" data-bs-remove="${escapeHtml(prod.id)}">✓ Selected</button>`
-                  : `<button type="button" class="btn btn-primary btn-sm" style="font-size:11px;padding:3px 8px;" data-bs-add="${escapeHtml(prod.id)}">+ Add</button>`
-                }
+              ? `<button type="button" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;" data-bs-remove="${escapeHtml(prod.id)}">✓ Selected</button>`
+              : `<button type="button" class="btn btn-primary btn-sm" style="font-size:11px;padding:3px 8px;" data-bs-add="${escapeHtml(prod.id)}">+ Add</button>`
+            }
               </div>
             </div>
           `;
