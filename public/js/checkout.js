@@ -167,12 +167,64 @@
   }
 
   // -------------------------------------------------------------------------
-  // CART & TOTAL CALCULATIONS
+  // ORDER ITEM NORMALIZATION & TOTAL CALCULATIONS
   // -------------------------------------------------------------------------
+  function normalizeOrderItem(raw) {
+    if (!raw || typeof raw !== 'object') {
+      return {
+        productId: '',
+        product_id: '',
+        id: '',
+        slug: '',
+        name: 'Accessory Piece',
+        title: 'Accessory Piece',
+        variant: '',
+        qty: 1,
+        quantity: 1,
+        price: 0,
+        unitPrice: 0,
+        total: 0,
+        itemTotal: 0,
+        image: '/assets/images/accessify-logo.png'
+      };
+    }
+
+    const name = String(raw.name || raw.title || 'Accessory Piece').trim();
+    const qty = Math.max(1, parseInt(raw.qty || raw.quantity, 10) || 1);
+    const price = Math.max(0, Number(raw.price !== undefined ? raw.price : (raw.unitPrice !== undefined ? raw.unitPrice : 0)) || 0);
+    const total = Number(raw.total !== undefined ? raw.total : (raw.itemTotal !== undefined ? raw.itemTotal : (price * qty))) || (price * qty);
+    const slug = raw.slug || raw.productId || raw.product_id || raw.id || (name ? name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : 'piece');
+    const image = raw.image || (Array.isArray(raw.images) && raw.images[0]) || raw.thumbnail || '/assets/images/accessify-logo.png';
+    const variant = raw.variant ? String(raw.variant).trim() : '';
+    const productId = raw.productId || raw.product_id || raw.id || '';
+
+    return {
+      productId,
+      product_id: productId,
+      id: productId,
+      slug,
+      name,
+      title: name,
+      variant: variant || undefined,
+      qty,
+      quantity: qty,
+      price,
+      unitPrice: price,
+      total,
+      itemTotal: total,
+      image
+    };
+  }
+
   function loadCart() {
     try {
       const saved = localStorage.getItem('accessify_cart_v1');
-      if (saved) cart = JSON.parse(saved);
+      if (saved) {
+        const raw = JSON.parse(saved);
+        if (Array.isArray(raw)) {
+          cart = raw.map(normalizeOrderItem);
+        }
+      }
       if (!Array.isArray(cart)) cart = [];
     } catch (_) {
       cart = [];
@@ -239,6 +291,7 @@
   }
 
   function formatFullAddress(c) {
+    if (!c || typeof c !== 'object') return '—';
     const parts = [
       c.house,
       c.street,
@@ -246,10 +299,10 @@
       c.city,
       c.district ? `${c.district} Dist.` : null,
       c.state,
-      `PIN: ${c.pincode}`,
+      c.pincode ? `PIN: ${c.pincode}` : null,
       'India'
     ].filter(Boolean);
-    return parts.join(', ');
+    return parts.join(', ') || '—';
   }
 
   // -------------------------------------------------------------------------
@@ -259,7 +312,16 @@
     try {
       const stored = sessionStorage.getItem('accessify_active_order');
       if (stored) {
-        activeOrder = JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          if (Array.isArray(parsed.items)) {
+            parsed.items = parsed.items.map(normalizeOrderItem);
+          }
+          parsed.subtotal = Number(parsed.subtotal) || 0;
+          parsed.delivery = Number(parsed.delivery !== undefined ? parsed.delivery : DEFAULT_DELIVERY_CHARGE);
+          parsed.total = Number(parsed.total) || (parsed.subtotal + parsed.delivery);
+          activeOrder = parsed;
+        }
       }
     } catch (_) {
       activeOrder = null;
@@ -267,6 +329,13 @@
   }
 
   function saveActiveOrder(order) {
+    if (!order) return;
+    if (Array.isArray(order.items)) {
+      order.items = order.items.map(normalizeOrderItem);
+    }
+    order.subtotal = Number(order.subtotal) || 0;
+    order.delivery = Number(order.delivery !== undefined ? order.delivery : DEFAULT_DELIVERY_CHARGE);
+    order.total = Number(order.total) || (order.subtotal + order.delivery);
     activeOrder = order;
     try {
       sessionStorage.setItem('accessify_active_order', JSON.stringify(order));
@@ -790,23 +859,32 @@
     // Populate Ordered Items with Direct Links
     if (el.waSummaryItems) {
       el.waSummaryItems.innerHTML = '';
-      ord.items.forEach(item => {
-        const itemSlug = item.slug || (item.title ? item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '');
-        const directLink = `${origin}/product/${itemSlug}`;
-        const itemEl = document.createElement('div');
-        itemEl.className = 'wa-item-card';
-        itemEl.innerHTML = `
-          <div class="wa-item-img">
-            <img src="${item.image || '/assets/images/accessify-logo.png'}" alt="${item.title}" onerror="this.src='/assets/images/accessify-logo.png'">
-          </div>
-          <div class="wa-item-info">
-            <span class="wa-item-name">${item.title}</span>
-            <div class="wa-item-meta">Qty: ${item.quantity} &bull; Price: ₹${(item.price * item.quantity).toLocaleString('en-IN')}</div>
-            <a href="${directLink}" target="_blank" rel="noopener noreferrer" class="wa-item-link">${directLink}</a>
-          </div>
-        `;
-        el.waSummaryItems.appendChild(itemEl);
-      });
+      if (Array.isArray(ord.items)) {
+        ord.items.forEach(rawItem => {
+          const item = normalizeOrderItem(rawItem);
+          const itemSlug = item.slug || (item.name ? item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : 'piece');
+          const directLink = `${origin}/product/${itemSlug}`;
+          const itemEl = document.createElement('div');
+          itemEl.className = 'wa-item-card';
+          const variantHtml = item.variant ? `<span class="wa-item-variant">Variant: ${escapeHtml(item.variant)}</span>` : '';
+          itemEl.innerHTML = `
+            <div class="wa-item-img">
+              <img src="${item.image}" alt="${escapeHtml(item.name)}" onerror="this.src='/assets/images/accessify-logo.png'">
+            </div>
+            <div class="wa-item-info">
+              <span class="wa-item-name">${escapeHtml(item.name)}</span>
+              ${variantHtml}
+              <div class="wa-item-meta">
+                <span>Qty: ${item.qty}</span> &bull;
+                <span>Unit Price: ₹${item.price.toLocaleString('en-IN')}</span> &bull;
+                <strong>Item Total: ₹${item.total.toLocaleString('en-IN')}</strong>
+              </div>
+              <a href="${directLink}" target="_blank" rel="noopener noreferrer" class="wa-item-link">${directLink}</a>
+            </div>
+          `;
+          el.waSummaryItems.appendChild(itemEl);
+        });
+      }
     }
 
     // Build WhatsApp Order Message
@@ -839,20 +917,31 @@
     lines.push('');
     lines.push('*ORDERED PRODUCTS* 🛍️');
 
-    ord.items.forEach((item, index) => {
-      const slug = item.slug || (item.title ? item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '');
-      const link = `${origin}/product/${slug}`;
-      lines.push(`${index + 1}. *${item.title}*`);
-      lines.push(`   Quantity: ${item.quantity}`);
-      lines.push(`   Price: ₹${(item.price * item.quantity).toLocaleString('en-IN')}`);
-      lines.push(`   Product Link: ${link}`);
-    });
+    if (Array.isArray(ord.items)) {
+      ord.items.forEach((rawItem, index) => {
+        const item = normalizeOrderItem(rawItem);
+        const slug = item.slug || (item.name ? item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : 'piece');
+        const link = `${origin}/product/${slug}`;
+        lines.push(`${index + 1}. *${item.name}*`);
+        if (item.variant) {
+          lines.push(`   Variant: ${item.variant}`);
+        }
+        lines.push(`   Quantity: ${item.qty}`);
+        lines.push(`   Unit Price: ₹${item.price.toLocaleString('en-IN')}`);
+        lines.push(`   Item Total: ₹${item.total.toLocaleString('en-IN')}`);
+        lines.push(`   Product Link: ${link}`);
+      });
+    }
+
+    const subtotal = Number(ord.subtotal) || 0;
+    const delivery = Number(ord.delivery !== undefined ? ord.delivery : DEFAULT_DELIVERY_CHARGE);
+    const grandTotal = Number(ord.total) || (subtotal + delivery);
 
     lines.push('');
     lines.push('────────────────────────');
-    lines.push(`*Product Subtotal:* ₹${ord.subtotal.toLocaleString('en-IN')}`);
-    lines.push(`*Pan-India Express Delivery:* ₹${ord.delivery}`);
-    lines.push(`*GRAND TOTAL PAYABLE:* ₹${ord.total.toLocaleString('en-IN')}`);
+    lines.push(`*Product Subtotal:* ₹${subtotal.toLocaleString('en-IN')}`);
+    lines.push(`*Pan-India Express Delivery:* ₹${delivery}`);
+    lines.push(`*GRAND TOTAL PAYABLE:* ₹${grandTotal.toLocaleString('en-IN')}`);
     lines.push('────────────────────────');
     lines.push(`*Payment Mode:* UPI to renjudinob@okaxis`);
     lines.push('*Payment Status:* Screenshot Attached 📎');
@@ -882,32 +971,48 @@
     const ord = activeOrder;
     const origin = window.location.origin;
 
+    const subtotal = Number(ord.subtotal) || 0;
+    const delivery = Number(ord.delivery !== undefined ? ord.delivery : DEFAULT_DELIVERY_CHARGE);
+    const grandTotal = Number(ord.total) || (subtotal + delivery);
+
     if (el.finalOrderId) el.finalOrderId.textContent = ord.orderId;
     if (el.finalCustName) el.finalCustName.textContent = ord.customer.name;
     if (el.finalCustPhone) el.finalCustPhone.textContent = `+91 ${ord.customer.phone}`;
     if (el.finalCustAddress) el.finalCustAddress.textContent = formatFullAddress(ord.customer);
-    if (el.finalSubtotal) el.finalSubtotal.textContent = `₹${ord.subtotal.toLocaleString('en-IN')}`;
-    if (el.finalDelivery) el.finalDelivery.textContent = `₹${ord.delivery}`;
-    if (el.finalGrandTotal) el.finalGrandTotal.textContent = `₹${ord.total.toLocaleString('en-IN')}`;
+    if (el.finalSubtotal) el.finalSubtotal.textContent = `₹${subtotal.toLocaleString('en-IN')}`;
+    if (el.finalDelivery) el.finalDelivery.textContent = `₹${delivery}`;
+    if (el.finalGrandTotal) el.finalGrandTotal.textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
 
     // Final Items List
     if (el.finalItemsList) {
       el.finalItemsList.innerHTML = '';
-      ord.items.forEach(item => {
-        const itemRow = document.createElement('div');
-        itemRow.className = 'final-item-row';
-        itemRow.innerHTML = `
-          <div class="final-item-main">
-            <img src="${item.image || '/assets/images/accessify-logo.png'}" alt="${item.title}" class="final-item-thumb" onerror="this.src='/assets/images/accessify-logo.png'">
-            <div>
-              <span class="final-item-title">${item.title}</span>
-              <span class="final-item-qty">Qty: ${item.quantity}</span>
+      if (Array.isArray(ord.items)) {
+        ord.items.forEach(rawItem => {
+          const item = normalizeOrderItem(rawItem);
+          const itemRow = document.createElement('div');
+          itemRow.className = 'final-item-row';
+          const variantHtml = item.variant ? `<span class="final-item-variant">Variant: ${escapeHtml(item.variant)}</span>` : '';
+          itemRow.innerHTML = `
+            <div class="final-item-main">
+              <img src="${item.image}" alt="${escapeHtml(item.name)}" class="final-item-thumb" onerror="this.src='/assets/images/accessify-logo.png'">
+              <div class="final-item-text">
+                <span class="final-item-title">${escapeHtml(item.name)}</span>
+                ${variantHtml}
+                <div class="final-item-meta-row">
+                  <span class="final-item-qty">Qty: ${item.qty}</span>
+                  <span class="final-item-dot">&bull;</span>
+                  <span class="final-item-unit-price">Unit Price: ₹${item.price.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
             </div>
-          </div>
-          <span class="final-item-price">₹${(item.price * item.quantity).toLocaleString('en-IN')}</span>
-        `;
-        el.finalItemsList.appendChild(itemRow);
-      });
+            <div class="final-item-price-col">
+              <span class="final-item-total-lbl">Item Total</span>
+              <span class="final-item-price">₹${item.total.toLocaleString('en-IN')}</span>
+            </div>
+          `;
+          el.finalItemsList.appendChild(itemRow);
+        });
+      }
     }
 
     // Reopen WhatsApp button
@@ -1000,6 +1105,16 @@
 
     // Setup Screenshot handlers
     setupScreenshotHandlers();
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   function copyToClipboard(text, successMsg) {

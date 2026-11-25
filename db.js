@@ -1242,7 +1242,29 @@ export async function createOrder(data) {
   await ensureInitialized();
   const id = data.id || `ord_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
   const orderNumber = data.order_number || `ACC-ORD-${Date.now().toString().slice(-6)}`;
-  const items = Array.isArray(data.items) ? data.items : [];
+  const rawItems = Array.isArray(data.items) ? data.items : [];
+  const items = rawItems.map(it => {
+    const qty = Math.max(1, parseInt(it.qty || it.quantity, 10) || 1);
+    const price = Math.max(0, Number(it.price !== undefined ? it.price : (it.unitPrice !== undefined ? it.unitPrice : 0)) || 0);
+    const name = String(it.name || it.title || 'Jewellery Piece').trim();
+    const total = Number(it.total !== undefined ? it.total : (it.itemTotal !== undefined ? it.itemTotal : (price * qty))) || (price * qty);
+    return {
+      productId: it.productId || it.product_id || it.id || null,
+      product_id: it.productId || it.product_id || it.id || null,
+      id: it.productId || it.product_id || it.id || null,
+      slug: it.slug || it.productId || it.id || slugify(name),
+      name,
+      title: name,
+      variant: it.variant || undefined,
+      qty,
+      quantity: qty,
+      price,
+      unitPrice: price,
+      total,
+      itemTotal: total,
+      image: it.image || '/assets/images/accessify-logo.png'
+    };
+  });
   const subtotal = data.subtotal !== undefined ? Number(data.subtotal) : items.reduce((s, it) => s + (Number(it.price || 0) * Number(it.qty || 1)), 0);
   const discount = Number(data.discount_amount) || 0;
   const deliveryCharge = Number(data.delivery_charge || 0);
@@ -1416,19 +1438,21 @@ export async function createPublicOrder(data) {
   let calculatedSubtotal = 0;
 
   for (const item of rawItems) {
-    const qty = Math.max(1, parseInt(item.qty, 10) || 1);
-    let unitPrice = Number(item.price || 0);
-    let productName = String(item.name || 'Jewellery Piece').trim();
+    const qty = Math.max(1, parseInt(item.qty || item.quantity, 10) || 1);
+    let unitPrice = Math.max(0, Number(item.price !== undefined ? item.price : (item.unitPrice !== undefined ? item.unitPrice : 0)) || 0);
+    let productName = String(item.name || item.title || 'Jewellery Piece').trim();
     let variant = String(item.variant || '').trim();
     let image = String(item.image || '').trim();
-    let slug = item.slug || item.productId || item.id || null;
+    let slug = item.slug || item.productId || item.product_id || item.id || null;
 
-    const prodLookup = item.productId || item.id;
+    const prodLookup = item.productId || item.product_id || item.id;
     if (prodLookup) {
       const dbProd = await getProductByIdOrSlug(prodLookup);
       if (dbProd && dbProd.product) {
-        unitPrice = Number(dbProd.product.price);
-        productName = dbProd.product.name;
+        if (dbProd.product.price !== undefined && Number(dbProd.product.price) > 0) {
+          unitPrice = Number(dbProd.product.price);
+        }
+        productName = dbProd.product.name || dbProd.product.title || productName;
         slug = dbProd.product.slug || dbProd.product.id || slug;
         if (!image && Array.isArray(dbProd.product.images) && dbProd.product.images.length > 0) {
           image = dbProd.product.images[0];
@@ -1439,14 +1463,20 @@ export async function createPublicOrder(data) {
     const itemTotal = unitPrice * qty;
     calculatedSubtotal += itemTotal;
     validatedItems.push({
-      productId: item.productId || item.id || null,
-      slug,
+      productId: item.productId || item.product_id || item.id || null,
+      product_id: item.productId || item.product_id || item.id || null,
+      id: item.productId || item.product_id || item.id || null,
+      slug: slug || (productName ? slugify(productName) : 'piece'),
       name: productName,
+      title: productName,
       variant: variant || undefined,
       qty,
+      quantity: qty,
       price: unitPrice,
+      unitPrice,
       total: itemTotal,
-      image
+      itemTotal,
+      image: image || '/assets/images/accessify-logo.png'
     });
   }
 
