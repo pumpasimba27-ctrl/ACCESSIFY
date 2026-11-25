@@ -1744,7 +1744,9 @@ export async function updateStoreSettings(updates) {
     'upi_id',
     'upi_name',
     'delivery_charge',
-    'upi_qr_image'
+    'upi_qr_image',
+    'best_selling_mode',
+    'best_selling_products'
   ];
   const statements = [];
   for (const k of allowedKeys) {
@@ -1761,6 +1763,68 @@ export async function updateStoreSettings(updates) {
     await bumpVersion();
   }
   return await getStoreSettings();
+}
+
+export async function getBestSellingProducts() {
+  await ensureInitialized();
+  const settings = await getStoreSettings();
+  const mode = settings.best_selling_mode || 'auto';
+  let manualIds = [];
+  try {
+    if (settings.best_selling_products) {
+      manualIds = typeof settings.best_selling_products === 'string'
+        ? JSON.parse(settings.best_selling_products)
+        : settings.best_selling_products;
+    }
+  } catch (_) {
+    manualIds = [];
+  }
+
+  if (mode === 'manual' && Array.isArray(manualIds) && manualIds.length > 0) {
+    const placeholders = manualIds.map(() => '?').join(',');
+    const rows = await queryAll(
+      `SELECT * FROM products WHERE id IN (${placeholders}) AND status NOT IN ('hidden', 'inactive')`,
+      manualIds
+    );
+    const map = new Map();
+    rows.forEach(r => map.set(r.id, formatProductRow(r)));
+    const ordered = [];
+    for (const id of manualIds) {
+      if (map.has(id)) {
+        ordered.push(map.get(id));
+      }
+    }
+    if (ordered.length > 0) {
+      return {
+        mode: 'manual',
+        products: ordered,
+        selectedIds: manualIds
+      };
+    }
+  }
+
+  // Automatic Mode: 10 latest products uploaded (sorted newest first)
+  const rows = await queryAll(
+    `SELECT * FROM products WHERE status NOT IN ('hidden', 'inactive') ORDER BY created_at DESC, id DESC LIMIT 10`
+  );
+  return {
+    mode: 'auto',
+    products: rows.map(formatProductRow),
+    selectedIds: manualIds
+  };
+}
+
+export async function updateBestSellingSettings({ mode, productIds }) {
+  await ensureInitialized();
+  const validatedMode = mode === 'manual' ? 'manual' : 'auto';
+  const validatedIds = Array.isArray(productIds) ? productIds.map(String) : [];
+
+  await updateStoreSettings({
+    best_selling_mode: validatedMode,
+    best_selling_products: JSON.stringify(validatedIds)
+  });
+
+  return await getBestSellingProducts();
 }
 
 // -------------------------------------------------------------

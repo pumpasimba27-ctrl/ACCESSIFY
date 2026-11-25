@@ -1181,3 +1181,113 @@ body.modal-open {
     min-height: 0;
   }
 }
+
+/* ==========================================================================
+   BEST SELLING PRODUCTS MANAGEMENT STYLES
+   ========================================================================== */
+.bs-product-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.bs-product-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.bs-product-item.selected-item {
+  border-left: 3px solid #22c55e;
+}
+
+.bs-item-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.bs-item-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: #000000;
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.bs-item-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bs-item-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bs-item-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.bs-item-price {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.bs-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.btn-icon-xs {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.btn-icon-xs:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #ffffff;
+}
+
+.btn-icon-xs.btn-remove:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+@media (max-width: 900px) {
+  .best-selling-mgmt-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

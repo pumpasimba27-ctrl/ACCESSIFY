@@ -49,7 +49,9 @@ import {
   exportFullBackup,
   getDbVersion,
   saveAsset,
-  getAsset
+  getAsset,
+  getBestSellingProducts,
+  updateBestSellingSettings
 } from './db.js';
 
 dotenv.config();
@@ -464,6 +466,22 @@ app.get('/api/payment-config', async (req, res) => {
       whatsappNumber: waNumber,
       deliveryCharge: delCharge,
       qrImage: settings.upi_qr_image || '/assets/images/upi-qr.png'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/best-selling', async (req, res) => {
+  try {
+    const result = await getBestSellingProducts();
+    const dbVersion = await getDbVersion();
+    res.json({
+      success: true,
+      mode: result.mode,
+      count: result.products.length,
+      data: result.products,
+      dbVersion
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -999,6 +1017,40 @@ app.put('/api/admin/settings', requireAdmin, async (req, res) => {
   const updated = await updateStoreSettings(req.body || {});
   const dbVersion = await broadcastEvent('settings_updated', { settings: updated });
   res.json({ success: true, message: 'Store settings saved', data: updated, dbVersion });
+});
+
+app.get('/api/admin/best-selling', requireAdmin, async (req, res) => {
+  try {
+    const result = await getBestSellingProducts();
+    const all = await getProducts({ includeHidden: false, limit: 1000 });
+    res.json({
+      success: true,
+      mode: result.mode,
+      selectedIds: result.selectedIds || [],
+      currentProducts: result.products,
+      availableProducts: all.products
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/admin/best-selling', requireAdmin, async (req, res) => {
+  try {
+    const { mode, productIds } = req.body || {};
+    const result = await updateBestSellingSettings({ mode, productIds });
+    const dbVersion = await broadcastEvent('best_selling_updated', { mode: result.mode });
+    res.json({
+      success: true,
+      message: 'Best Selling Products settings saved successfully',
+      mode: result.mode,
+      selectedIds: result.selectedIds || [],
+      data: result.products,
+      dbVersion
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // -------------------------------------------------------------

@@ -25,6 +25,10 @@
     customers: [],
     banners: [],
     settings: {},
+    bestSellingMode: 'auto',
+    bestSellingSelectedIds: [],
+    bestSellingAvailableProducts: [],
+    bestSellingFilterQuery: '',
     auditLogs: [],
     dashboardStats: null,
     modalImages: [],
@@ -286,7 +290,8 @@
       loadProducts(),
       loadOrders(),
       loadCustomers(),
-      loadBannersAndSettings()
+      loadBannersAndSettings(),
+      loadBestSellingSettings()
     ]);
   }
 
@@ -1515,6 +1520,239 @@
   }
 
   // =========================================================================
+  // BEST SELLING PRODUCTS MANAGEMENT
+  // =========================================================================
+  async function loadBestSellingSettings() {
+    try {
+      const res = await apiFetch('/api/admin/best-selling');
+      if (res && res.success) {
+        state.bestSellingMode = res.mode || 'auto';
+        state.bestSellingSelectedIds = Array.isArray(res.selectedIds) ? res.selectedIds : [];
+        state.bestSellingAvailableProducts = Array.isArray(res.availableProducts) ? res.availableProducts : [];
+
+        // Update tab count
+        const badge = $('count-best-selling');
+        if (badge) {
+          badge.textContent = state.bestSellingMode === 'manual'
+            ? `${state.bestSellingSelectedIds.length} M`
+            : 'Auto';
+        }
+
+        renderBestSellingUI();
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to load best selling settings', 'error');
+    }
+  }
+
+  function renderBestSellingUI() {
+    const isAuto = state.bestSellingMode === 'auto';
+
+    // Update Mode Card
+    const modeBadge = $('best-selling-mode-badge');
+    const modeDesc = $('best-selling-mode-desc');
+    const btnAuto = $('btn-mode-auto');
+    const btnManual = $('btn-mode-manual');
+
+    if (modeBadge) {
+      if (isAuto) {
+        modeBadge.textContent = '⚡ AUTOMATIC MODE ACTIVE';
+        modeBadge.style.background = '#22c55e';
+        modeBadge.style.color = '#000';
+      } else {
+        modeBadge.textContent = '✍️ MANUAL MODE ACTIVE';
+        modeBadge.style.background = '#eab308';
+        modeBadge.style.color = '#000';
+      }
+    }
+
+    if (modeDesc) {
+      modeDesc.textContent = isAuto
+        ? 'Showing the 10 latest products uploaded to the website automatically (sorted newest first).'
+        : 'Displaying your custom selected products in the exact order arranged below.';
+    }
+
+    if (btnAuto && btnManual) {
+      if (isAuto) {
+        btnAuto.className = 'btn btn-sm btn-primary';
+        btnManual.className = 'btn btn-sm btn-secondary';
+      } else {
+        btnAuto.className = 'btn btn-sm btn-secondary';
+        btnManual.className = 'btn btn-sm btn-primary';
+      }
+    }
+
+    // Render Selected Products Column
+    const selectedList = $('selected-products-list');
+    const selectedEmpty = $('selected-products-empty');
+    const selectedCount = $('selected-products-count');
+
+    const selectedIds = state.bestSellingSelectedIds || [];
+    if (selectedCount) {
+      selectedCount.textContent = `${selectedIds.length} ${selectedIds.length === 1 ? 'product' : 'products'} selected`;
+    }
+
+    if (selectedList) {
+      if (selectedIds.length === 0) {
+        selectedList.innerHTML = '';
+        if (selectedEmpty) selectedEmpty.style.display = 'block';
+      } else {
+        if (selectedEmpty) selectedEmpty.style.display = 'none';
+
+        const prodMap = new Map();
+        (state.bestSellingAvailableProducts || []).forEach(p => prodMap.set(p.id, p));
+
+        let html = '';
+        selectedIds.forEach((id, index) => {
+          const prod = prodMap.get(id);
+          const name = prod ? prod.name : `Product ID: ${id}`;
+          const cat = prod ? prod.category : 'General';
+          const price = prod ? `₹${Number(prod.price).toLocaleString('en-IN')}` : '';
+          const img = (prod && prod.images && prod.images[0]) || '/assets/images/accessify-logo.png';
+
+          const isFirst = index === 0;
+          const isLast = index === selectedIds.length - 1;
+
+          html += `
+            <div class="bs-product-item selected-item" data-bs-id="${escapeHtml(id)}">
+              <div class="bs-item-info">
+                <span style="font-size:12px;font-weight:700;color:var(--text-muted);min-width:18px;">${index + 1}.</span>
+                <img src="${escapeHtml(img)}" alt="${escapeHtml(name)}" class="bs-item-thumb" onerror="this.src='/assets/images/accessify-logo.png'">
+                <div class="bs-item-text">
+                  <span class="bs-item-title" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+                  <div class="bs-item-meta">
+                    <span>${escapeHtml(cat)}</span>
+                    ${price ? `<span class="bs-item-price">${price}</span>` : ''}
+                  </div>
+                </div>
+              </div>
+              <div class="bs-item-actions">
+                <button type="button" class="btn-icon-xs" data-bs-move-up="${index}" title="Move up" ${isFirst ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : ''}>↑</button>
+                <button type="button" class="btn-icon-xs" data-bs-move-down="${index}" title="Move down" ${isLast ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : ''}>↓</button>
+                <button type="button" class="btn-icon-xs btn-remove" data-bs-remove="${escapeHtml(id)}" title="Remove product">✕</button>
+              </div>
+            </div>
+          `;
+        });
+        selectedList.innerHTML = html;
+      }
+    }
+
+    // Render Available Products Column
+    const availList = $('available-products-list');
+    const availCount = $('available-products-count');
+    const q = (state.bestSellingFilterQuery || '').toLowerCase().trim();
+
+    let filtered = state.bestSellingAvailableProducts || [];
+    if (q) {
+      filtered = filtered.filter(p =>
+        (p.name && p.name.toLowerCase().includes(q)) ||
+        (p.category && p.category.toLowerCase().includes(q))
+      );
+    }
+
+    if (availCount) {
+      availCount.textContent = `${filtered.length} products available`;
+    }
+
+    if (availList) {
+      if (filtered.length === 0) {
+        availList.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);font-size:13px;">No matching products found.</div>`;
+      } else {
+        const selectedSet = new Set(selectedIds);
+        let html = '';
+        filtered.forEach(prod => {
+          const isSelected = selectedSet.has(prod.id);
+          const img = (prod.images && prod.images[0]) || '/assets/images/accessify-logo.png';
+          const price = `₹${Number(prod.price).toLocaleString('en-IN')}`;
+
+          html += `
+            <div class="bs-product-item ${isSelected ? 'selected-item' : ''}" data-bs-avail-id="${escapeHtml(prod.id)}">
+              <div class="bs-item-info">
+                <img src="${escapeHtml(img)}" alt="${escapeHtml(prod.name)}" class="bs-item-thumb" onerror="this.src='/assets/images/accessify-logo.png'">
+                <div class="bs-item-text">
+                  <span class="bs-item-title" title="${escapeHtml(prod.name)}">${escapeHtml(prod.name)}</span>
+                  <div class="bs-item-meta">
+                    <span>${escapeHtml(prod.category)}</span>
+                    <span class="bs-item-price">${price}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="bs-item-actions">
+                ${isSelected
+                  ? `<button type="button" class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 8px;" data-bs-remove="${escapeHtml(prod.id)}">✓ Selected</button>`
+                  : `<button type="button" class="btn btn-primary btn-sm" style="font-size:11px;padding:3px 8px;" data-bs-add="${escapeHtml(prod.id)}">+ Add</button>`
+                }
+              </div>
+            </div>
+          `;
+        });
+        availList.innerHTML = html;
+      }
+    }
+  }
+
+  function moveBestSellingItem(index, direction) {
+    const list = [...state.bestSellingSelectedIds];
+    const target = index + direction;
+    if (target < 0 || target >= list.length) return;
+    const temp = list[index];
+    list[index] = list[target];
+    list[target] = temp;
+    state.bestSellingSelectedIds = list;
+    state.bestSellingMode = 'manual';
+    renderBestSellingUI();
+  }
+
+  function addBestSellingItem(id) {
+    if (!state.bestSellingSelectedIds.includes(id)) {
+      state.bestSellingSelectedIds.push(id);
+      state.bestSellingMode = 'manual';
+      renderBestSellingUI();
+    }
+  }
+
+  function removeBestSellingItem(id) {
+    state.bestSellingSelectedIds = state.bestSellingSelectedIds.filter(x => x !== id);
+    renderBestSellingUI();
+  }
+
+  async function saveBestSellingSettings() {
+    const btn = $('btn-save-best-selling');
+    const orig = btn ? btn.textContent : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+    }
+    try {
+      const res = await apiFetch('/api/admin/best-selling', {
+        method: 'POST',
+        body: JSON.stringify({
+          mode: state.bestSellingMode,
+          productIds: state.bestSellingSelectedIds
+        })
+      });
+      if (res && res.success) {
+        showToast('Best Selling Products settings saved successfully!');
+        await loadBestSellingSettings();
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to save settings', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = orig;
+      }
+    }
+  }
+
+  async function resetBestSellingSettings() {
+    if (!confirm('Reset Best Selling Products to Automatic Mode (displaying 10 latest products)?')) return;
+    state.bestSellingMode = 'auto';
+    await saveBestSellingSettings();
+  }
+
+  // =========================================================================
   // TAB SWITCHING & GLOBAL EVENT WIRING
   // =========================================================================
   function switchTab(tabName) {
@@ -1525,6 +1763,9 @@
     document.querySelectorAll('.tab-panel').forEach((panel) => {
       panel.classList.toggle('hidden', panel.id !== `panel-${tabName}`);
     });
+    if (tabName === 'best-selling') {
+      loadBestSellingSettings();
+    }
   }
 
   function bindEvents() {
@@ -2042,6 +2283,54 @@
     $('refresh-logs-btn').addEventListener('click', async () => {
       await loadDashboard();
       showToast('Audit logs refreshed', 'info');
+    });
+
+    // Best Selling Products Management Events
+    $('btn-mode-auto')?.addEventListener('click', () => {
+      state.bestSellingMode = 'auto';
+      renderBestSellingUI();
+    });
+    $('btn-mode-manual')?.addEventListener('click', () => {
+      state.bestSellingMode = 'manual';
+      renderBestSellingUI();
+    });
+    $('btn-save-best-selling')?.addEventListener('click', saveBestSellingSettings);
+    $('btn-reset-best-selling')?.addEventListener('click', resetBestSellingSettings);
+
+    $('best-selling-search-input')?.addEventListener('input', (e) => {
+      state.bestSellingFilterQuery = e.target.value;
+      renderBestSellingUI();
+    });
+
+    $('selected-products-list')?.addEventListener('click', (e) => {
+      const up = e.target.closest('[data-bs-move-up]');
+      if (up) {
+        moveBestSellingItem(Number(up.dataset.bsMoveUp), -1);
+        return;
+      }
+      const down = e.target.closest('[data-bs-move-down]');
+      if (down) {
+        moveBestSellingItem(Number(down.dataset.bsMoveDown), 1);
+        return;
+      }
+      const rm = e.target.closest('[data-bs-remove]');
+      if (rm) {
+        removeBestSellingItem(rm.dataset.bsRemove);
+        return;
+      }
+    });
+
+    $('available-products-list')?.addEventListener('click', (e) => {
+      const add = e.target.closest('[data-bs-add]');
+      if (add) {
+        addBestSellingItem(add.dataset.bsAdd);
+        return;
+      }
+      const rm = e.target.closest('[data-bs-remove]');
+      if (rm) {
+        removeBestSellingItem(rm.dataset.bsRemove);
+        return;
+      }
     });
 
     // Dynamic auto-resize for product description textarea to eliminate scroll traps

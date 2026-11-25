@@ -115,6 +115,9 @@
         <button type="button" class="admin-tab-btn" data-tab="banners">
           Banners &amp; Settings <span class="tab-count" id="count-banners">0</span>
         </button>
+        <button type="button" class="admin-tab-btn" data-tab="best-selling">
+          Best Selling <span class="tab-count" id="count-best-selling">Auto</span>
+        </button>
         <button type="button" class="admin-tab-btn" data-tab="logs">
           Audit Logs <span class="tab-count" id="count-logs">0</span>
         </button>
@@ -378,6 +381,88 @@
               <tr><td colspan="4" class="empty-state">No audit logs yet.</td></tr>
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <!-- =====================================================
+           TAB 7: BEST SELLING PRODUCTS MANAGEMENT
+           ===================================================== -->
+      <section id="panel-best-selling" class="panel tab-panel hidden">
+        <div class="toolbar" style="flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h2 style="margin:0;font-family:var(--font-display);font-size:18px;">BEST SELLING PRODUCTS MANAGEMENT</h2>
+            <p style="margin:4px 0 0;font-size:12px;color:var(--text-muted);">
+              Configure whether to automatically show the 10 latest products or manually curate and order featured pieces.
+            </p>
+          </div>
+          <div class="toolbar-actions" style="display:flex;align-items:center;gap:0.75rem;">
+            <button type="button" id="btn-reset-best-selling" class="btn btn-secondary btn-sm" title="Restore Automatic Mode">
+              ↺ Reset to Latest 10 Products
+            </button>
+            <button type="button" id="btn-save-best-selling" class="btn btn-primary btn-sm">
+              💾 Save Changes
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode Selection Banner -->
+        <div class="best-selling-mode-card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:8px;padding:1.25rem;margin-bottom:1.5rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+            <div>
+              <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);display:block;margin-bottom:4px;">Current Active Mode</span>
+              <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                <span id="best-selling-mode-badge" class="badge" style="background:#22c55e;color:#000;font-weight:700;padding:4px 10px;border-radius:4px;font-size:12px;">AUTOMATIC MODE ACTIVE</span>
+                <span id="best-selling-mode-desc" style="font-size:13px;color:var(--text-secondary);">Showing the 10 latest uploaded products automatically.</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+              <button type="button" class="btn btn-sm btn-primary" id="btn-mode-auto" style="min-width:130px;">
+                ⚡ Automatic Mode
+              </button>
+              <button type="button" class="btn btn-sm btn-secondary" id="btn-mode-manual" style="min-width:130px;">
+                ✍️ Manual Mode
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Two Column Layout: Selected Products & Available Products -->
+        <div class="best-selling-mgmt-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+          
+          <!-- Column 1: Selected / Featured Products in Carousel (Ordered) -->
+          <div class="card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:8px;padding:1.25rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;border-bottom:1px solid var(--border-subtle);padding-bottom:0.75rem;">
+              <div>
+                <h3 style="margin:0;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Selected Carousel Products</h3>
+                <span style="font-size:12px;color:var(--text-muted);" id="selected-products-count">0 products selected</span>
+              </div>
+              <span style="font-size:11px;color:var(--text-muted);background:rgba(255,255,255,0.06);padding:3px 8px;border-radius:4px;">Use ↑ ↓ to reorder</span>
+            </div>
+
+            <div id="selected-products-empty" style="text-align:center;padding:2.5rem 1rem;color:var(--text-muted);font-size:13px;">
+              No products manually selected yet.<br>Click "+ Add" on available products on the right to select custom pieces.
+            </div>
+
+            <div id="selected-products-list" style="display:flex;flex-direction:column;gap:0.5rem;max-height:550px;overflow-y:auto;padding-right:4px;">
+              <!-- Injected dynamically via admin.js -->
+            </div>
+          </div>
+
+          <!-- Column 2: Available Catalog Products to Pick From -->
+          <div class="card" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:8px;padding:1.25rem;">
+            <div style="margin-bottom:1rem;border-bottom:1px solid var(--border-subtle);padding-bottom:0.75rem;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+                <h3 style="margin:0;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Available Store Products</h3>
+                <span style="font-size:12px;color:var(--text-muted);" id="available-products-count">Loading catalog...</span>
+              </div>
+              <input type="search" id="best-selling-search-input" class="form-control form-control-sm" placeholder="Filter by product name, category..." style="width:100%;font-size:12px;" />
+            </div>
+
+            <div id="available-products-list" style="display:flex;flex-direction:column;gap:0.5rem;max-height:550px;overflow-y:auto;padding-right:4px;">
+              <!-- Injected dynamically via admin.js -->
+            </div>
+          </div>
+
         </div>
       </section>
     </main>

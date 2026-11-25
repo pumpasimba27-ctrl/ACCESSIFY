@@ -14,6 +14,7 @@
 
   // Global State
   let allProducts = [];
+  let bestSellingProducts = [];
   let allCategories = [];
   let currentSection = 'accessories';
   let currentCategory = 'all';
@@ -62,6 +63,13 @@
     categoriesSectionTitle: document.getElementById('categories-section-title'),
     categoriesSectionLabel: document.getElementById('categories-section-label'),
     categoriesVaultGrid: document.getElementById('categories-vault-grid'),
+
+    // Best Selling Products Section
+    bestSellingSection: document.getElementById('best-selling-section'),
+    bestSellingTrack: document.getElementById('best-selling-track'),
+    bestSellingSliderWrap: document.getElementById('best-selling-slider-wrap'),
+    bestSellingPrev: document.getElementById('best-selling-prev'),
+    bestSellingNext: document.getElementById('best-selling-next'),
 
     // Products Grid & Filters
     productsGrid: document.getElementById('products-grid'),
@@ -429,6 +437,36 @@ Please provide more details about availability and ordering.`;
   }
 
   // -------------------------------------------------------------
+  // BEST SELLING PRODUCTS (SLIDER ENGINE)
+  // -------------------------------------------------------------
+  async function fetchBestSellingProducts() {
+    if (!el.bestSellingTrack) return;
+    try {
+      const res = await fetch(`${API_BASE}/best-selling?t=${Date.now()}`);
+      const json = await res.json();
+      if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
+        bestSellingProducts = json.data;
+        renderBestSellingSlider(bestSellingProducts);
+        if (el.bestSellingSection) el.bestSellingSection.style.display = 'block';
+      } else {
+        if (el.bestSellingSection) el.bestSellingSection.style.display = 'none';
+      }
+    } catch (err) {
+      console.warn('Failed to fetch best selling products:', err);
+    }
+  }
+
+  function renderBestSellingSlider(products) {
+    if (!el.bestSellingTrack) return;
+    let html = '';
+    products.forEach(p => {
+      html += createProductCardHtml(p);
+    });
+    el.bestSellingTrack.innerHTML = html;
+    attachCardListeners(el.bestSellingTrack);
+  }
+
+  // -------------------------------------------------------------
   // CATEGORY PILLS & CONTROLS
   // -------------------------------------------------------------
   function renderCategoryPills() {
@@ -649,7 +687,8 @@ Please provide more details about availability and ordering.`;
         if (!card) return;
         e.preventDefault();
         const id = card.getAttribute('data-id');
-        const prod = allProducts.find(p => String(p.id) === String(id));
+        const prod = allProducts.find(p => String(p.id) === String(id)) ||
+                     bestSellingProducts.find(p => String(p.id) === String(id));
         if (prod) {
           openPdpModal(prod);
         }
@@ -1430,7 +1469,7 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
         if (!isSyncing) {
           isSyncing = true;
           try {
-            await Promise.all([fetchCategories(), fetchProducts(false)]);
+            await Promise.all([fetchCategories(), fetchProducts(false), fetchBestSellingProducts()]);
           } finally {
             isSyncing = false;
           }
@@ -1443,6 +1482,7 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
         try {
           await fetchCategories();
           await fetchProducts(true);
+          await fetchBestSellingProducts();
         } finally {
           isSyncing = false;
         }
@@ -1658,6 +1698,22 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
         }
       });
     });
+
+    // Best Selling Slider Navigation
+    if (el.bestSellingPrev && el.bestSellingSliderWrap) {
+      el.bestSellingPrev.addEventListener('click', () => {
+        const card = el.bestSellingTrack?.firstElementChild;
+        const scrollAmt = card ? (card.offsetWidth + 16) * 1.5 : 320;
+        el.bestSellingSliderWrap.scrollBy({ left: -scrollAmt, behavior: 'smooth' });
+      });
+    }
+    if (el.bestSellingNext && el.bestSellingSliderWrap) {
+      el.bestSellingNext.addEventListener('click', () => {
+        const card = el.bestSellingTrack?.firstElementChild;
+        const scrollAmt = card ? (card.offsetWidth + 16) * 1.5 : 320;
+        el.bestSellingSliderWrap.scrollBy({ left: scrollAmt, behavior: 'smooth' });
+      });
+    }
 
     // Hero WhatsApp Button
     el.heroWhatsappBtn?.addEventListener('click', () => {
@@ -2040,13 +2096,14 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
           el.remove();
         }
       });
-    } catch (_) {}
+    } catch (_) { }
 
     initEventListeners();
     initCategoryCarousel();
     updateCartUI();
     loadPaymentConfig();
     await initSectionRouting();
+    await fetchBestSellingProducts();
     initRealtimeSync();
   }
 
