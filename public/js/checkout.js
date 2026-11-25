@@ -1,39 +1,56 @@
 /**
- * ACCESSIFY — LUXURY DEDICATED CHECKOUT ENGINE
- * FULL-PAGE REAL-TIME ORDER PLACEMENT & WHATSAPP CONCIERGE INTEGRATION
- * TARGET WHATSAPP: +91 7012400815
+ * ACCESSIFY — LUXURY 4-PAGE MOBILE-FIRST CHECKOUT CONTROLLER
+ * Target WhatsApp: +91 7012400815 (917012400815)
+ * Official UPI ID: renjudinob@okaxis
+ * Account Name: ACCESSIFY
  */
 
 (function () {
   'use strict';
 
   const API_BASE = '/api';
-  const FALLBACK_SVG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23111"/><text x="50" y="55" fill="%23444" font-size="12" text-anchor="middle" font-family="sans-serif">ACCESSIFY</text></svg>';
+  const WHATSAPP_NUMBER = '917012400815';
+  const OFFICIAL_UPI_ID = 'renjudinob@okaxis';
+  const OFFICIAL_ACCOUNT_NAME = 'ACCESSIFY';
+  const DEFAULT_DELIVERY_CHARGE = 99;
 
-  // State
+  // Application State
   let cart = [];
-  let paymentConfig = {
-    upiId: 'renjudinob@okaxis',
-    upiName: 'ACCESSIFY',
-    whatsappNumber: '917012400815',
-    deliveryCharge: 99,
-    qrImage: '/assets/images/renjudinob-upi-qr.jpg'
-  };
+  let currentStep = 1;
   let selectedScreenshotFile = null;
+  let screenshotPreviewUrl = null;
+  let uploadedScreenshotPath = null;
   let isSubmitting = false;
+  let activeOrder = null;
 
-  // DOM Elements
+  // DOM Elements Cache
   const el = {
-    form: document.getElementById('checkout-form'),
-    emptyState: document.getElementById('checkout-empty'),
-    successView: document.getElementById('checkout-success-view'),
-    alertError: document.getElementById('checkout-alert-error'),
+    // Header & Navigation
+    navBackBtn: document.getElementById('nav-back-btn'),
+    navBackText: document.getElementById('nav-back-text'),
+    mobilePillBadge: document.getElementById('mobile-pill-badge'),
+    mobilePillTitle: document.getElementById('mobile-pill-title'),
 
-    // Inputs
+    // Views
+    viewEmpty: document.getElementById('view-empty'),
+    viewPage1: document.getElementById('view-page-1'),
+    viewPage2: document.getElementById('view-page-2'),
+    viewPage3: document.getElementById('view-page-3'),
+    viewPage4: document.getElementById('view-page-4'),
+
+    // Progress Bar Items
+    progStep1: document.getElementById('prog-step-1'),
+    progStep2: document.getElementById('prog-step-2'),
+    progStep3: document.getElementById('prog-step-3'),
+    progStep4: document.getElementById('prog-step-4'),
+    progLine1: document.getElementById('prog-line-1'),
+    progLine2: document.getElementById('prog-line-2'),
+    progLine3: document.getElementById('prog-line-3'),
+
+    // Page 1: Form Inputs & Controls
+    formAddress: document.getElementById('form-address'),
     inputName: document.getElementById('chk-name'),
     inputPhone: document.getElementById('chk-phone'),
-    inputWhatsapp: document.getElementById('chk-whatsapp'),
-    inputEmail: document.getElementById('chk-email'),
     inputHouse: document.getElementById('chk-house'),
     inputStreet: document.getElementById('chk-street'),
     inputCity: document.getElementById('chk-city'),
@@ -41,71 +58,117 @@
     inputState: document.getElementById('chk-state'),
     inputPincode: document.getElementById('chk-pincode'),
     inputLandmark: document.getElementById('chk-landmark'),
+    inputEmail: document.getElementById('chk-email'),
+    chkConfirmAddress: document.getElementById('chk-confirm-address'),
+    btnGotoStep2: document.getElementById('btn-goto-step-2'),
+    alertErrorP1: document.getElementById('alert-error-page-1'),
 
-    // Summary
-    itemsCountBadge: document.getElementById('summary-items-count'),
-    itemsList: document.getElementById('order-items-list'),
-    subtotalVal: document.getElementById('summary-subtotal'),
-    deliveryVal: document.getElementById('summary-delivery'),
-    grandTotalVal: document.getElementById('summary-grand-total'),
+    // Field Error Elements
+    errName: document.getElementById('err-name'),
+    errPhone: document.getElementById('err-phone'),
+    errHouse: document.getElementById('err-house'),
+    errStreet: document.getElementById('err-street'),
+    errCity: document.getElementById('err-city'),
+    errDistrict: document.getElementById('err-district'),
+    errState: document.getElementById('err-state'),
+    errPincode: document.getElementById('err-pincode'),
+    errConfirmAddress: document.getElementById('err-confirm-address'),
 
-    // Payment Section
+    // Page 2: Payment Section
+    alertErrorP2: document.getElementById('alert-error-page-2'),
+    calcItemsCount: document.getElementById('calc-items-count'),
+    calcSubtotalVal: document.getElementById('calc-subtotal-val'),
+    calcDeliveryVal: document.getElementById('calc-delivery-val'),
+    calcTotalVal: document.getElementById('calc-total-val'),
     btnUpiIntent: document.getElementById('btn-upi-intent'),
-    upiIdDisplay: document.getElementById('upi-id-display'),
+    p2UpiIdDisplay: document.getElementById('p2-upi-id-display'),
     btnCopyUpi: document.getElementById('btn-copy-upi'),
     btnCopyAmt: document.getElementById('btn-copy-amt'),
-    qrImg: document.getElementById('checkout-qr-img'),
-    qrPayableAmount: document.getElementById('qr-payable-amount'),
-
-    // Screenshot
-    dropzone: document.getElementById('screenshot-dropzone'),
+    checkoutQrImg: document.getElementById('checkout-qr-img'),
+    qrAmountDisplay: document.getElementById('qr-amount-display'),
+    screenshotDropzone: document.getElementById('screenshot-dropzone'),
+    screenshotInput: document.getElementById('screenshot-input'),
     dropzoneTrigger: document.getElementById('dropzone-click-trigger'),
-    fileInput: document.getElementById('screenshot-input'),
-    btnBrowse: document.getElementById('btn-browse-file'),
-    previewCard: document.getElementById('screenshot-preview-card'),
-    previewImg: document.getElementById('screenshot-preview-img'),
-    previewFileName: document.getElementById('screenshot-file-name'),
+    btnBrowseFile: document.getElementById('btn-browse-file'),
+    screenshotPreviewCard: document.getElementById('screenshot-preview-card'),
+    screenshotPreviewImg: document.getElementById('screenshot-preview-img'),
+    screenshotFileName: document.getElementById('screenshot-file-name'),
     btnReplaceScreenshot: document.getElementById('btn-replace-screenshot'),
     btnRemoveScreenshot: document.getElementById('btn-remove-screenshot'),
     errScreenshot: document.getElementById('err-screenshot'),
+    btnBackToStep1: document.getElementById('btn-back-to-step-1'),
+    btnGotoStep3: document.getElementById('btn-goto-step-3'),
+    btnP2Text: document.getElementById('btn-p2-text'),
+    btnP2Spinner: document.getElementById('btn-p2-spinner'),
 
-    // Submit
-    btnPlaceOrder: document.getElementById('btn-place-order'),
-    btnText: document.getElementById('btn-text'),
-    btnSpinner: document.getElementById('btn-spinner'),
+    // Page 3: WhatsApp Submission
+    waOrderIdBadge: document.getElementById('wa-order-id-badge'),
+    waSummaryName: document.getElementById('wa-summary-name'),
+    waSummaryPhone: document.getElementById('wa-summary-phone'),
+    waSummaryAddress: document.getElementById('wa-summary-address'),
+    waSummaryItems: document.getElementById('wa-summary-items'),
+    waSummarySubtotal: document.getElementById('wa-summary-subtotal'),
+    waSummaryDelivery: document.getElementById('wa-summary-delivery'),
+    waSummaryGrandTotal: document.getElementById('wa-summary-grand-total'),
+    waScreenshotImg: document.getElementById('wa-screenshot-img'),
+    btnDownloadScreenshot: document.getElementById('btn-download-screenshot'),
+    btnSendWhatsapp: document.getElementById('btn-send-whatsapp'),
+    btnBackToStep2: document.getElementById('btn-back-to-step-2'),
+    btnGotoStep4: document.getElementById('btn-goto-step-4'),
 
-    // Success State
-    successOrderId: document.getElementById('success-order-id'),
-    successCustName: document.getElementById('success-cust-name'),
-    successCustPhone: document.getElementById('success-cust-phone'),
-    successCustAddress: document.getElementById('success-cust-address'),
-    successSubtotal: document.getElementById('success-subtotal'),
-    successDelivery: document.getElementById('success-delivery'),
-    successTotal: document.getElementById('success-total'),
-    successProductsList: document.getElementById('success-products-list'),
-    btnSuccessWa: document.getElementById('btn-success-wa'),
-    btnSuccessDownloadSs: document.getElementById('btn-success-download-ss'),
+    // Page 4: Order Details
+    finalOrderId: document.getElementById('final-order-id'),
+    finalCustName: document.getElementById('final-cust-name'),
+    finalCustPhone: document.getElementById('final-cust-phone'),
+    finalCustAddress: document.getElementById('final-cust-address'),
+    finalItemsList: document.getElementById('final-items-list'),
+    finalSubtotal: document.getElementById('final-subtotal'),
+    finalDelivery: document.getElementById('final-delivery'),
+    finalGrandTotal: document.getElementById('final-grand-total'),
+    btnFinalWa: document.getElementById('btn-final-wa'),
+    btnContinueShopping: document.getElementById('btn-continue-shopping'),
 
-    // Toast
+    // Toast Container
     toastContainer: document.getElementById('checkout-toast-container')
   };
 
-  // -------------------------------------------------------------
+  // =========================================================================
   // INITIALIZATION
-  // -------------------------------------------------------------
+  // =========================================================================
+  document.addEventListener('DOMContentLoaded', () => {
+    init();
+  });
+
   async function init() {
     loadCart();
-    if (cart.length === 0) {
-      showEmptyCart();
+    loadStoredOrder();
+    populateSavedCustomer();
+    setupEventListeners();
+
+    // Check step from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedStep = parseInt(urlParams.get('step'), 10);
+
+    if (cart.length === 0 && !activeOrder) {
+      showView('empty');
       return;
     }
 
-    await loadPaymentConfig();
-    populateSavedCustomer();
-    renderOrderSummary();
-    setupEventListeners();
+    if ([1, 2, 3, 4].includes(requestedStep)) {
+      if ((requestedStep === 3 || requestedStep === 4) && !activeOrder) {
+        // Can only jump to 3 or 4 if activeOrder exists
+        goToStep(1, false);
+      } else {
+        goToStep(requestedStep, false);
+      }
+    } else {
+      goToStep(1, false);
+    }
   }
 
+  // -------------------------------------------------------------------------
+  // CART & TOTAL CALCULATIONS
+  // -------------------------------------------------------------------------
   function loadCart() {
     try {
       const saved = localStorage.getItem('accessify_cart_v1');
@@ -116,36 +179,27 @@
     }
   }
 
-  function showEmptyCart() {
-    if (el.form) el.form.style.display = 'none';
-    if (el.emptyState) el.emptyState.style.display = 'block';
+  function getCartSubtotal() {
+    return cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
   }
 
-  async function loadPaymentConfig() {
-    try {
-      const res = await fetch(`${API_BASE}/settings?t=${Date.now()}`);
-      const json = await res.json();
-      if (json.success && json.data) {
-        paymentConfig.upiId = json.data.upi_id || 'renjudinob@okaxis';
-        paymentConfig.upiName = json.data.account_name || 'ACCESSIFY';
-        const fetchedWa = (json.data.whatsapp_number || '').trim();
-        paymentConfig.whatsappNumber = (fetchedWa && fetchedWa !== '917012408015') ? fetchedWa : '917012400815';
-        paymentConfig.deliveryCharge = Number(json.data.delivery_charge !== undefined ? json.data.delivery_charge : 99);
-      }
-    } catch (_) { }
-
-    if (el.upiIdDisplay) {
-      el.upiIdDisplay.textContent = paymentConfig.upiId;
-    }
+  function getGrandTotal() {
+    const sub = getCartSubtotal();
+    return sub > 0 ? sub + DEFAULT_DELIVERY_CHARGE : 0;
   }
 
+  function getCartItemsCount() {
+    return cart.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+  }
+
+  // -------------------------------------------------------------------------
+  // CUSTOMER AUTO-SAVE & PRE-FILL
+  // -------------------------------------------------------------------------
   function populateSavedCustomer() {
     try {
       const saved = JSON.parse(localStorage.getItem('accessify_cust_v1') || '{}');
       if (saved.name && el.inputName) el.inputName.value = saved.name;
       if (saved.phone && el.inputPhone) el.inputPhone.value = saved.phone;
-      if (saved.whatsapp && el.inputWhatsapp) el.inputWhatsapp.value = saved.whatsapp;
-      if (saved.email && el.inputEmail) el.inputEmail.value = saved.email;
       if (saved.house && el.inputHouse) el.inputHouse.value = saved.house;
       if (saved.street && el.inputStreet) el.inputStreet.value = saved.street;
       if (saved.city && el.inputCity) el.inputCity.value = saved.city;
@@ -153,573 +207,776 @@
       if (saved.state && el.inputState) el.inputState.value = saved.state;
       if (saved.pincode && el.inputPincode) el.inputPincode.value = saved.pincode;
       if (saved.landmark && el.inputLandmark) el.inputLandmark.value = saved.landmark;
+      if (saved.email && el.inputEmail) el.inputEmail.value = saved.email;
     } catch (_) { }
   }
 
-  // -------------------------------------------------------------
-  // RENDER ORDER SUMMARY & COMPUTE TOTALS
-  // -------------------------------------------------------------
-  function calculateTotals() {
-    const subtotal = cart.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.qty) || 1)), 0);
-    const delivery = Number(paymentConfig.deliveryCharge !== undefined ? paymentConfig.deliveryCharge : 99);
-    const grandTotal = subtotal + delivery;
-    const totalQty = cart.reduce((sum, item) => sum + (Number(item.qty) || 1), 0);
-    return { subtotal, delivery, grandTotal, totalQty };
+  function saveCustomerToStorage() {
+    const data = getCustomerFormData();
+    try {
+      localStorage.setItem('accessify_cust_v1', JSON.stringify(data));
+    } catch (_) { }
   }
 
-  function renderOrderSummary() {
-    const { subtotal, delivery, grandTotal, totalQty } = calculateTotals();
-
-    if (el.itemsCountBadge) {
-      el.itemsCountBadge.textContent = `${totalQty} ${totalQty === 1 ? 'PIECE' : 'PIECES'}`;
-    }
-
-    if (el.subtotalVal) {
-      el.subtotalVal.textContent = `₹${subtotal.toLocaleString('en-IN')}`;
-    }
-
-    if (el.deliveryVal) {
-      el.deliveryVal.textContent = delivery > 0 ? `₹${delivery}` : 'FREE';
-    }
-
-    if (el.grandTotalVal) {
-      el.grandTotalVal.textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
-    }
-
-    if (el.qrPayableAmount) {
-      el.qrPayableAmount.textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
-    }
-
-    // Dynamic QR with exact order amount and payee name ACCESSIFY
-    if (el.qrImg) {
-      el.qrImg.src = `${API_BASE}/upi-qr?amount=${grandTotal}&upi_id=${encodeURIComponent(paymentConfig.upiId)}&name=ACCESSIFY&t=${Date.now()}`;
-    }
-
-    // Mobile UPI Intent link
-    if (el.btnUpiIntent) {
-      el.btnUpiIntent.href = `upi://pay?pa=${encodeURIComponent(paymentConfig.upiId)}&pn=${encodeURIComponent(paymentConfig.upiName)}&am=${grandTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent('ACCESSIFY Order')}`;
-    }
-
-    // Render items list
-    if (el.itemsList) {
-      let html = '';
-      cart.forEach((item) => {
-        const itemImg = item.image || FALLBACK_SVG;
-        const itemPriceFormatted = `₹${Number(item.price).toLocaleString('en-IN')}`;
-        const itemTotalFormatted = `₹${(Number(item.price) * (Number(item.qty) || 1)).toLocaleString('en-IN')}`;
-        const variantHtml = item.variant ? `<span class="item-meta"> &bull; ${escapeHtml(item.variant)}</span>` : '';
-
-        html += `
-          <div class="checkout-item-row">
-            <div class="item-thumb-box">
-              <img src="${escapeHtml(itemImg)}" alt="${escapeHtml(item.name)}" class="item-thumb-img" onerror="this.src='${FALLBACK_SVG}'">
-              <span class="item-qty-badge">${item.qty || 1}</span>
-            </div>
-            <div class="item-details">
-              <h3 class="item-name">${escapeHtml(item.name)}</h3>
-              <div class="item-meta">
-                ${itemPriceFormatted} × ${item.qty || 1}${variantHtml}
-              </div>
-            </div>
-            <div class="item-price">${itemTotalFormatted}</div>
-          </div>
-        `;
-      });
-      el.itemsList.innerHTML = html;
-    }
-  }
-
-  // -------------------------------------------------------------
-  // EVENT LISTENERS & SCREENSHOT WORKFLOW
-  // -------------------------------------------------------------
-  function setupEventListeners() {
-    // Copy UPI ID
-    el.btnCopyUpi?.addEventListener('click', () => {
-      copyToClipboard(paymentConfig.upiId, 'UPI ID copied to clipboard!', el.btnCopyUpi);
-    });
-
-    // Copy Amount
-    el.btnCopyAmt?.addEventListener('click', () => {
-      const { grandTotal } = calculateTotals();
-      copyToClipboard(grandTotal.toString(), `Payable amount ₹${grandTotal} copied!`, el.btnCopyAmt);
-    });
-
-    // Dropzone Click
-    el.dropzoneTrigger?.addEventListener('click', () => {
-      el.fileInput?.click();
-    });
-
-    el.btnBrowse?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      el.fileInput?.click();
-    });
-
-    // File input change
-    el.fileInput?.addEventListener('change', (e) => {
-      const file = e.target.files && e.target.files[0];
-      handleFileSelected(file);
-    });
-
-    // Drag and drop
-    if (el.dropzone) {
-      ['dragenter', 'dragover'].forEach(name => {
-        el.dropzone.addEventListener(name, (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          el.dropzone.classList.add('drag-over');
-        });
-      });
-
-      ['dragleave', 'drop'].forEach(name => {
-        el.dropzone.addEventListener(name, (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          el.dropzone.classList.remove('drag-over');
-        });
-      });
-
-      el.dropzone.addEventListener('drop', (e) => {
-        const file = e.dataTransfer.files && e.dataTransfer.files[0];
-        handleFileSelected(file);
-      });
-    }
-
-    // Replace / Remove Screenshot
-    el.btnReplaceScreenshot?.addEventListener('click', () => {
-      el.fileInput?.click();
-    });
-
-    el.btnRemoveScreenshot?.addEventListener('click', () => {
-      removeScreenshot();
-    });
-
-    // Clean field errors on user typing
-    const inputs = [
-      el.inputName, el.inputPhone, el.inputHouse, el.inputStreet,
-      el.inputCity, el.inputDistrict, el.inputState, el.inputPincode
-    ];
-    inputs.forEach(input => {
-      input?.addEventListener('input', () => {
-        input.classList.remove('is-invalid');
-        const errSpan = document.getElementById(`err-${input.name || input.id.replace('chk-', '')}`);
-        if (errSpan) errSpan.classList.remove('show');
-        if (el.alertError) el.alertError.style.display = 'none';
-      });
-    });
-
-    // Submit Order Form
-    el.form?.addEventListener('submit', handleOrderSubmit);
-  }
-
-  function handleFileSelected(file) {
-    if (!file) return;
-
-    const validExts = /\.(jpe?g|png|webp)$/i;
-    const validMimes = /^image\/(jpeg|png|webp)$/i;
-
-    if (!validExts.test(file.name) && !validMimes.test(file.type)) {
-      showToast('Please select a valid image (JPG, PNG, or WEBP)', 'error');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      showToast('Image file size must be less than 10MB', 'error');
-      return;
-    }
-
-    selectedScreenshotFile = file;
-
-    // Show Preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (el.previewImg) el.previewImg.src = e.target.result;
-      if (el.previewFileName) el.previewFileName.textContent = `${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
-      if (el.dropzone) el.dropzone.style.display = 'none';
-      if (el.previewCard) el.previewCard.style.display = 'flex';
-      if (el.errScreenshot) el.errScreenshot.classList.remove('show');
-      if (el.alertError) el.alertError.style.display = 'none';
+  function getCustomerFormData() {
+    return {
+      name: el.inputName ? el.inputName.value.trim() : '',
+      phone: el.inputPhone ? el.inputPhone.value.trim().replace(/\D/g, '') : '',
+      house: el.inputHouse ? el.inputHouse.value.trim() : '',
+      street: el.inputStreet ? el.inputStreet.value.trim() : '',
+      city: el.inputCity ? el.inputCity.value.trim() : '',
+      district: el.inputDistrict ? el.inputDistrict.value.trim() : '',
+      state: el.inputState ? el.inputState.value.trim() : '',
+      pincode: el.inputPincode ? el.inputPincode.value.trim().replace(/\D/g, '') : '',
+      landmark: el.inputLandmark ? el.inputLandmark.value.trim() : '',
+      email: el.inputEmail ? el.inputEmail.value.trim() : ''
     };
-    reader.readAsDataURL(file);
   }
 
-  function removeScreenshot() {
-    selectedScreenshotFile = null;
-    if (el.fileInput) el.fileInput.value = '';
-    if (el.previewCard) el.previewCard.style.display = 'none';
-    if (el.dropzone) el.dropzone.style.display = 'block';
+  function formatFullAddress(c) {
+    const parts = [
+      c.house,
+      c.street,
+      c.landmark ? `(Landmark: ${c.landmark})` : null,
+      c.city,
+      c.district ? `${c.district} Dist.` : null,
+      c.state,
+      `PIN: ${c.pincode}`,
+      'India'
+    ].filter(Boolean);
+    return parts.join(', ');
   }
 
-  function copyToClipboard(text, successMsg, btnElement) {
-    navigator.clipboard.writeText(text).then(() => {
-      showToast(successMsg);
-      if (btnElement) {
-        btnElement.classList.add('copied');
-        const origText = btnElement.querySelector('span')?.textContent || '';
-        if (btnElement.querySelector('span')) btnElement.querySelector('span').textContent = 'Copied!';
-        setTimeout(() => {
-          btnElement.classList.remove('copied');
-          if (btnElement.querySelector('span')) btnElement.querySelector('span').textContent = origText;
-        }, 2000);
+  // -------------------------------------------------------------------------
+  // ACTIVE ORDER STORAGE
+  // -------------------------------------------------------------------------
+  function loadStoredOrder() {
+    try {
+      const stored = sessionStorage.getItem('accessify_active_order');
+      if (stored) {
+        activeOrder = JSON.parse(stored);
       }
-    }).catch(() => {
-      showToast('Copied to clipboard!');
-    });
+    } catch (_) {
+      activeOrder = null;
+    }
   }
 
-  // -------------------------------------------------------------
-  // FORM VALIDATION & SUBMISSION WORKFLOW
-  // -------------------------------------------------------------
-  function validateForm() {
-    let isValid = true;
-    let firstInvalidInput = null;
+  function saveActiveOrder(order) {
+    activeOrder = order;
+    try {
+      sessionStorage.setItem('accessify_active_order', JSON.stringify(order));
+    } catch (_) { }
+  }
 
-    function markError(input, errId, msg) {
-      isValid = false;
-      if (input) {
-        input.classList.add('is-invalid');
-        if (!firstInvalidInput) firstInvalidInput = input;
-      }
-      const errSpan = document.getElementById(errId);
-      if (errSpan) {
-        errSpan.textContent = msg;
-        errSpan.classList.add('show');
-      }
+  // =========================================================================
+  // STEP ROUTING & PROGRESS BAR
+  // =========================================================================
+  function goToStep(step, pushHistory = true) {
+    currentStep = step;
+
+    if (pushHistory) {
+      const newUrl = `${window.location.pathname}?step=${step}`;
+      history.pushState({ step }, '', newUrl);
     }
 
-    const name = (el.inputName?.value || '').trim();
-    const phone = (el.inputPhone?.value || '').trim().replace(/\D/g, '');
-    const house = (el.inputHouse?.value || '').trim();
-    const street = (el.inputStreet?.value || '').trim();
-    const city = (el.inputCity?.value || '').trim();
-    const district = (el.inputDistrict?.value || '').trim();
-    const state = (el.inputState?.value || '').trim();
-    const pincode = (el.inputPincode?.value || '').trim().replace(/\D/g, '');
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    if (!name) markError(el.inputName, 'err-name', 'Please enter your full name');
-    if (!phone || phone.length !== 10) markError(el.inputPhone, 'err-phone', 'Please enter a valid 10-digit mobile number');
-    if (!house) markError(el.inputHouse, 'err-house', 'Please enter your house name, flat or building no.');
-    if (!street) markError(el.inputStreet, 'err-street', 'Please enter your street, locality or area');
-    if (!city) markError(el.inputCity, 'err-city', 'Please enter your city/town');
-    if (!district) markError(el.inputDistrict, 'err-district', 'Please enter your district');
-    if (!state) markError(el.inputState, 'err-state', 'Please select your state');
-    if (!pincode || pincode.length !== 6) markError(el.inputPincode, 'err-pincode', 'Please enter a valid 6-digit Indian PIN code');
+    // Update Progress Indicator
+    updateProgressIndicator(step);
 
-    if (!selectedScreenshotFile) {
-      isValid = false;
-      if (el.errScreenshot) {
-        el.errScreenshot.textContent = 'Please upload your UPI payment screenshot to place your order';
-        el.errScreenshot.classList.add('show');
+    // Update Header Dynamic Back Link
+    updateHeaderBackLink(step);
+
+    // Show step view
+    showView(`step-${step}`);
+
+    // Render step-specific data
+    if (step === 2) {
+      renderPage2Payment();
+    } else if (step === 3) {
+      renderPage3WhatsApp();
+    } else if (step === 4) {
+      renderPage4OrderDetails();
+    }
+  }
+
+  function showView(viewId) {
+    if (el.viewEmpty) el.viewEmpty.style.display = viewId === 'empty' ? 'block' : 'none';
+    if (el.viewPage1) el.viewPage1.style.display = viewId === 'step-1' ? 'block' : 'none';
+    if (el.viewPage2) el.viewPage2.style.display = viewId === 'step-2' ? 'block' : 'none';
+    if (el.viewPage3) el.viewPage3.style.display = viewId === 'step-3' ? 'block' : 'none';
+    if (el.viewPage4) el.viewPage4.style.display = viewId === 'step-4' ? 'block' : 'none';
+  }
+
+  function updateProgressIndicator(step) {
+    const steps = [
+      { num: 1, el: el.progStep1, line: el.progLine1, name: 'Address' },
+      { num: 2, el: el.progStep2, line: el.progLine2, name: 'Payment' },
+      { num: 3, el: el.progStep3, line: el.progLine3, name: 'Send Order' },
+      { num: 4, el: el.progStep4, line: null, name: 'Order Details' }
+    ];
+
+    steps.forEach(s => {
+      if (!s.el) return;
+      s.el.classList.remove('active', 'completed');
+      if (s.num < step) {
+        s.el.classList.add('completed');
+      } else if (s.num === step) {
+        s.el.classList.add('active');
       }
-      if (!firstInvalidInput) firstInvalidInput = el.dropzone;
+
+      if (s.line) {
+        s.line.classList.toggle('completed', s.num < step);
+      }
+    });
+
+    // Update mobile live pill
+    if (el.mobilePillBadge) el.mobilePillBadge.textContent = `${step} of 4`;
+    if (el.mobilePillTitle) {
+      const names = { 1: 'Address', 2: 'Payment', 3: 'Send Order', 4: 'Order Details' };
+      el.mobilePillTitle.textContent = names[step] || 'Checkout';
+    }
+  }
+
+  function updateHeaderBackLink(step) {
+    if (!el.navBackBtn || !el.navBackText) return;
+
+    if (step === 1) {
+      el.navBackBtn.setAttribute('href', '/');
+      el.navBackBtn.onclick = null;
+      el.navBackText.textContent = 'Back to Store';
+    } else if (step === 2) {
+      el.navBackBtn.setAttribute('href', 'javascript:void(0)');
+      el.navBackBtn.onclick = (e) => {
+        e.preventDefault();
+        goToStep(1);
+      };
+      el.navBackText.textContent = '← Back to Address';
+    } else if (step === 3) {
+      el.navBackBtn.setAttribute('href', 'javascript:void(0)');
+      el.navBackBtn.onclick = (e) => {
+        e.preventDefault();
+        goToStep(2);
+      };
+      el.navBackText.textContent = '← Back to Payment';
+    } else if (step === 4) {
+      el.navBackBtn.setAttribute('href', '/');
+      el.navBackBtn.onclick = null;
+      el.navBackText.textContent = 'Continue Shopping';
+    }
+  }
+
+  // Handle browser hardware back / forward buttons
+  window.addEventListener('popstate', (e) => {
+    const step = (e.state && e.state.step) ? e.state.step : 1;
+    goToStep(step, false);
+  });
+
+  // =========================================================================
+  // PAGE 1: ADDRESS VALIDATION & TRANSITION
+  // =========================================================================
+  function validatePage1() {
+    clearPage1Errors();
+    let isValid = true;
+    let firstErrorField = null;
+
+    const data = getCustomerFormData();
+
+    // Name
+    if (!data.name || data.name.length < 2) {
+      showFieldError('errName', el.inputName, 'Please enter your full recipient name');
+      if (!firstErrorField) firstErrorField = el.inputName;
+      isValid = false;
+    }
+
+    // Phone (10 digits)
+    if (!data.phone || data.phone.length !== 10) {
+      showFieldError('errPhone', el.inputPhone, 'Please enter a valid 10-digit mobile number');
+      if (!firstErrorField) firstErrorField = el.inputPhone;
+      isValid = false;
+    }
+
+    // House
+    if (!data.house) {
+      showFieldError('errHouse', el.inputHouse, 'Please enter house/flat name or building number');
+      if (!firstErrorField) firstErrorField = el.inputHouse;
+      isValid = false;
+    }
+
+    // Street
+    if (!data.street) {
+      showFieldError('errStreet', el.inputStreet, 'Please enter street, area, or locality');
+      if (!firstErrorField) firstErrorField = el.inputStreet;
+      isValid = false;
+    }
+
+    // City
+    if (!data.city) {
+      showFieldError('errCity', el.inputCity, 'Please enter your city or town');
+      if (!firstErrorField) firstErrorField = el.inputCity;
+      isValid = false;
+    }
+
+    // State
+    if (!data.state) {
+      showFieldError('errState', el.inputState, 'Please select your state or union territory');
+      if (!firstErrorField) firstErrorField = el.inputState;
+      isValid = false;
+    }
+
+    // PIN Code (6 digits)
+    if (!data.pincode || data.pincode.length !== 6) {
+      showFieldError('errPincode', el.inputPincode, 'Please enter a valid 6-digit postal PIN code');
+      if (!firstErrorField) firstErrorField = el.inputPincode;
+      isValid = false;
+    }
+
+    // Confirmation Checkbox
+    if (!el.chkConfirmAddress || !el.chkConfirmAddress.checked) {
+      showFieldError('errConfirmAddress', el.chkConfirmAddress, 'Please confirm your delivery address to continue');
+      if (!firstErrorField) firstErrorField = el.chkConfirmAddress;
+      isValid = false;
     }
 
     if (!isValid) {
-      if (el.alertError) {
-        el.alertError.textContent = 'Please correct the highlighted fields and ensure your payment screenshot is attached before submitting.';
-        el.alertError.style.display = 'block';
-        el.alertError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else if (firstInvalidInput) {
-        firstInvalidInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (el.alertErrorP1) {
+        el.alertErrorP1.textContent = 'Please fill in all required delivery fields and confirm your address.';
+        el.alertErrorP1.style.display = 'block';
+      }
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (typeof firstErrorField.focus === 'function') firstErrorField.focus();
       }
     }
 
     return isValid;
   }
 
-  async function handleOrderSubmit(e) {
-    e.preventDefault();
-    if (isSubmitting) return;
+  function showFieldError(errElementId, inputEl, message) {
+    const errEl = el[errElementId];
+    if (errEl) errEl.textContent = message;
+    if (inputEl && inputEl.classList) {
+      inputEl.style.borderColor = 'var(--color-error)';
+    }
+  }
 
-    if (!validateForm()) return;
-    if (cart.length === 0) {
-      showToast('Your shopping bag is empty. Please add items to checkout.');
+  function clearPage1Errors() {
+    if (el.alertErrorP1) el.alertErrorP1.style.display = 'none';
+    const errorKeys = ['errName', 'errPhone', 'errHouse', 'errStreet', 'errCity', 'errDistrict', 'errState', 'errPincode', 'errConfirmAddress'];
+    errorKeys.forEach(k => {
+      if (el[k]) el[k].textContent = '';
+    });
+
+    const inputs = [el.inputName, el.inputPhone, el.inputHouse, el.inputStreet, el.inputCity, el.inputDistrict, el.inputState, el.inputPincode];
+    inputs.forEach(input => {
+      if (input) input.style.borderColor = '';
+    });
+  }
+
+  // =========================================================================
+  // PAGE 2: PAYMENT & SCREENSHOT HANDLING
+  // =========================================================================
+  function renderPage2Payment() {
+    const subtotal = getCartSubtotal();
+    const grandTotal = getGrandTotal();
+    const count = getCartItemsCount();
+
+    if (el.calcItemsCount) el.calcItemsCount.textContent = `${count} ${count === 1 ? 'piece' : 'pieces'}`;
+    if (el.calcSubtotalVal) el.calcSubtotalVal.textContent = `₹${subtotal.toLocaleString('en-IN')}`;
+    if (el.calcDeliveryVal) el.calcDeliveryVal.textContent = `₹${DEFAULT_DELIVERY_CHARGE}`;
+    if (el.calcTotalVal) el.calcTotalVal.textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
+    if (el.qrAmountDisplay) el.qrAmountDisplay.textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
+    if (el.p2UpiIdDisplay) el.p2UpiIdDisplay.textContent = OFFICIAL_UPI_ID;
+
+    // Mobile UPI Intent Deep Link
+    if (el.btnUpiIntent) {
+      const upiUrl = `upi://pay?pa=${encodeURIComponent(OFFICIAL_UPI_ID)}&pn=${encodeURIComponent(OFFICIAL_ACCOUNT_NAME)}&am=${grandTotal}&cu=INR&tn=${encodeURIComponent('ACCESSIFY Order')}`;
+      el.btnUpiIntent.setAttribute('href', upiUrl);
+    }
+  }
+
+  function setupScreenshotHandlers() {
+    if (!el.screenshotDropzone || !el.screenshotInput) return;
+
+    // Trigger file picker
+    if (el.dropzoneTrigger) {
+      el.dropzoneTrigger.addEventListener('click', () => el.screenshotInput.click());
+    }
+
+    // Drag and Drop
+    el.screenshotDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      el.screenshotDropzone.classList.add('dragover');
+    });
+
+    el.screenshotDropzone.addEventListener('dragleave', () => {
+      el.screenshotDropzone.classList.remove('dragover');
+    });
+
+    el.screenshotDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      el.screenshotDropzone.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleScreenshotFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    // File Input Change
+    el.screenshotInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handleScreenshotFile(e.target.files[0]);
+      }
+    });
+
+    // Replace & Remove
+    if (el.btnReplaceScreenshot) {
+      el.btnReplaceScreenshot.addEventListener('click', (e) => {
+        e.stopPropagation();
+        el.screenshotInput.click();
+      });
+    }
+
+    if (el.btnRemoveScreenshot) {
+      el.btnRemoveScreenshot.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeScreenshot();
+      });
+    }
+  }
+
+  function handleScreenshotFile(file) {
+    if (!file) return;
+
+    // Validate type
+    if (!file.type.match(/^image\/(jpeg|png|webp)$/i)) {
+      if (el.errScreenshot) el.errScreenshot.textContent = 'Please upload a valid image file (JPG, PNG, or WEBP).';
       return;
     }
 
-    isSubmitting = true;
-    setLoadingState(true);
+    // Validate size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      if (el.errScreenshot) el.errScreenshot.textContent = 'Image size exceeds 10 MB. Please choose a smaller screenshot.';
+      return;
+    }
+
+    if (el.errScreenshot) el.errScreenshot.textContent = '';
+    selectedScreenshotFile = file;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      screenshotPreviewUrl = e.target.result;
+      displayScreenshotPreview(file.name, screenshotPreviewUrl);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function displayScreenshotPreview(name, url) {
+    if (el.screenshotDropzone) el.screenshotDropzone.style.display = 'none';
+    if (el.screenshotPreviewCard) el.screenshotPreviewCard.style.display = 'flex';
+    if (el.screenshotPreviewImg) el.screenshotPreviewImg.src = url;
+    if (el.screenshotFileName) el.screenshotFileName.textContent = name;
+  }
+
+  function removeScreenshot() {
+    selectedScreenshotFile = null;
+    screenshotPreviewUrl = null;
+    uploadedScreenshotPath = null;
+    if (el.screenshotInput) el.screenshotInput.value = '';
+    if (el.screenshotDropzone) el.screenshotDropzone.style.display = 'block';
+    if (el.screenshotPreviewCard) el.screenshotPreviewCard.style.display = 'none';
+    if (el.screenshotPreviewImg) el.screenshotPreviewImg.src = '';
+  }
+
+  // -------------------------------------------------------------------------
+  // SUBMIT PAYMENT & PROCEED TO PAGE 3
+  // -------------------------------------------------------------------------
+  async function submitPaymentAndProceed() {
+    if (isSubmitting) return;
+
+    if (!selectedScreenshotFile && !uploadedScreenshotPath && (!activeOrder || !activeOrder.screenshotUrl)) {
+      if (el.errScreenshot) {
+        el.errScreenshot.textContent = 'Payment screenshot is required. Please upload your transaction receipt.';
+      }
+      if (el.alertErrorP2) {
+        el.alertErrorP2.textContent = 'Payment screenshot is mandatory. Please upload your transaction receipt before continuing.';
+        el.alertErrorP2.style.display = 'block';
+      }
+      if (el.screenshotDropzone) {
+        el.screenshotDropzone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    if (el.errScreenshot) el.errScreenshot.textContent = '';
+    if (el.alertErrorP2) el.alertErrorP2.style.display = 'none';
+
+    setPage2Loading(true);
 
     try {
-      // 1. Upload screenshot to backend storage
-      const formData = new FormData();
-      formData.append('screenshot', selectedScreenshotFile);
+      // 1. Upload screenshot if a new file is chosen
+      let screenshotUrl = uploadedScreenshotPath || (activeOrder ? activeOrder.screenshotUrl : null);
+      if (selectedScreenshotFile) {
+        const formData = new FormData();
+        formData.append('screenshot', selectedScreenshotFile);
 
-      const uploadRes = await fetch(`${API_BASE}/upload-payment-proof`, {
-        method: 'POST',
-        body: formData
-      });
-      const uploadJson = await uploadRes.json();
-      if (!uploadRes.ok || !uploadJson.success) {
-        throw new Error(uploadJson.error || 'Failed to upload payment screenshot. Please try again.');
+        const uploadRes = await fetch(`${API_BASE}/upload-payment-proof`, {
+          method: 'POST',
+          body: formData
+        });
+
+        const uploadJson = await uploadRes.json();
+        if (!uploadJson.success || !uploadJson.imageUrl) {
+          throw new Error(uploadJson.error || 'Failed to upload screenshot. Please try again.');
+        }
+
+        screenshotUrl = uploadJson.imageUrl;
+        uploadedScreenshotPath = screenshotUrl;
       }
 
-      const screenshotUrl = uploadJson.url;
-
-      // 2. Prepare order payload
-      const name = (el.inputName?.value || '').trim();
-      const phone = (el.inputPhone?.value || '').trim().replace(/\D/g, '');
-      const whatsapp = (el.inputWhatsapp?.value || '').trim().replace(/\D/g, '') || phone;
-      const email = (el.inputEmail?.value || '').trim();
-      const house = (el.inputHouse?.value || '').trim();
-      const street = (el.inputStreet?.value || '').trim();
-      const city = (el.inputCity?.value || '').trim();
-      const district = (el.inputDistrict?.value || '').trim();
-      const state = (el.inputState?.value || '').trim();
-      const pincode = (el.inputPincode?.value || '').trim().replace(/\D/g, '');
-      const landmark = (el.inputLandmark?.value || '').trim();
+      // 2. Prepare Order Payload
+      const customer = getCustomerFormData();
+      const subtotal = getCartSubtotal();
+      const grandTotal = getGrandTotal();
 
       const orderPayload = {
-        customer_name: name,
-        customer_phone: phone,
-        customer_email: email,
-        whatsapp_phone: whatsapp,
-        house,
-        street,
-        city,
-        district,
-        state,
-        pincode,
-        landmark,
-        items: cart,
-        payment_screenshot: screenshotUrl
+        customer_name: customer.name,
+        customer_phone: customer.phone,
+        customer_email: customer.email,
+        house: customer.house,
+        street: customer.street,
+        city: customer.city,
+        district: customer.district,
+        state: customer.state,
+        pincode: customer.pincode,
+        landmark: customer.landmark,
+        payment_screenshot: screenshotUrl,
+        items: cart.map(item => ({
+          product_id: item.id || item.product_id,
+          title: item.name || item.title,
+          price: Number(item.price) || 0,
+          quantity: Number(item.quantity) || 1,
+          slug: item.slug || (item.name ? item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : 'product'),
+          image: item.image || item.thumbnail || ''
+        }))
       };
 
-      // 3. Register order in database
+      // 3. Register Order in Database
       const orderRes = await fetch(`${API_BASE}/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderPayload)
       });
+
       const orderJson = await orderRes.json();
-      if (!orderRes.ok || !orderJson.success) {
-        throw new Error(orderJson.error || 'Failed to register your order. Please try again.');
+      const registeredOrder = orderJson.data || orderJson.order;
+      if (!orderJson.success || !registeredOrder) {
+        throw new Error(orderJson.error || 'Unable to register order in system. Please try again.');
       }
 
-      const createdOrder = orderJson.data;
+      // 4. Save Active Order State
+      const orderDetails = {
+        orderId: registeredOrder.order_number || `ACC-ORD-${Date.now().toString().slice(-6)}`,
+        id: registeredOrder.id,
+        customer,
+        items: registeredOrder.items && registeredOrder.items.length ? registeredOrder.items : orderPayload.items,
+        subtotal: registeredOrder.subtotal !== undefined ? registeredOrder.subtotal : subtotal,
+        delivery: registeredOrder.delivery_charge !== undefined ? registeredOrder.delivery_charge : DEFAULT_DELIVERY_CHARGE,
+        total: registeredOrder.total_amount !== undefined ? registeredOrder.total_amount : grandTotal,
+        screenshotUrl,
+        screenshotPreview: screenshotPreviewUrl || screenshotUrl
+      };
 
-      // 4. Save customer details for future checkout convenience
-      try {
-        localStorage.setItem('accessify_cust_v1', JSON.stringify({
-          name, phone, whatsapp, email, house, street, city, district, state, pincode, landmark
-        }));
-      } catch (_) { }
-
-      // 5. Construct formatted WhatsApp Order Notification
-      const origin = window.location.origin || 'https://accessify-xi.vercel.app';
-      const itemsListFormatted = (createdOrder.items || []).map(it => {
-        const varTxt = it.variant ? ` (${it.variant})` : '';
-        const prodSlug = it.slug || it.productId || it.id || '';
-        const prodUrl = `${origin}/product/${encodeURIComponent(prodSlug)}`;
-        return `${it.name}${varTxt}\nQuantity: ${it.qty}\nPrice: ₹${Number(it.price).toLocaleString('en-IN')}\nProduct Link: ${prodUrl}`;
-      }).join('\n\n');
-
-      const fullAddress = [
-        createdOrder.house,
-        createdOrder.street,
-        createdOrder.city,
-        district,
-        createdOrder.state
-      ].filter(Boolean).join(', ');
-
-      const waMsg =
-        `💎 NEW WEBSITE ORDER 💎
-
-Order ID: ${createdOrder.order_number}
-
-CUSTOMER DETAILS
-Name: ${createdOrder.customer_name}
-Phone: ${createdOrder.customer_phone}
-
-DELIVERY ADDRESS
-${fullAddress}
-PIN Code: ${createdOrder.pincode || '—'}
-Landmark: ${createdOrder.landmark || 'None'}
-
-ORDERED PRODUCTS:
-
-${itemsListFormatted}
-
-PAYMENT SUMMARY
-Product Subtotal: ₹${Number(createdOrder.subtotal).toLocaleString('en-IN')}
-Delivery Charge: ₹99
-Grand Total: ₹${Number(createdOrder.total_amount).toLocaleString('en-IN')}
-
-Payment Method: UPI
-UPI ID: ${paymentConfig.upiId || 'renjudinob@okaxis'}
-Payment Status: Screenshot submitted – verification pending
-
-📸 PAYMENT SCREENSHOT
-Customer will attach the payment screenshot manually before sending this WhatsApp message.`;
-
-      // Target WhatsApp: strictly +917012400815
-      let targetWaNumber = (paymentConfig.whatsappNumber || '917012400815').trim();
-      if (!targetWaNumber || targetWaNumber === '917012408015') {
-        targetWaNumber = '917012400815';
-      }
-      const waUrl = `https://wa.me/${targetWaNumber}?text=${encodeURIComponent(waMsg)}`;
-
-      // Retain reference to selected file for local instant download
-      const uploadedFileRef = selectedScreenshotFile;
-
-      // 6. Clear shopping cart
-      try {
-        localStorage.removeItem('accessify_cart_v1');
-      } catch (_) { }
-
-      // 7. Render Success Screen
-      renderSuccessState(createdOrder, waUrl, uploadedFileRef);
-
-      // 8. Open WhatsApp chat automatically on mobile devices
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        window.location.href = waUrl;
-      } else {
-        window.open(waUrl, '_blank', 'noopener,noreferrer');
-      }
-
+      saveActiveOrder(orderDetails);
+      showToast('Order registered! Ready for WhatsApp verification.');
+      goToStep(3);
     } catch (err) {
-      console.error('[Checkout Error]', err);
-      if (el.alertError) {
-        el.alertError.textContent = err.message || 'An error occurred while placing your order. Please check your network and try again.';
-        el.alertError.style.display = 'block';
-        el.alertError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
-        showToast(err.message || 'Order failed. Please try again.', 'error');
+      if (el.alertErrorP2) {
+        el.alertErrorP2.textContent = err.message || 'Error processing order. Please try again.';
+        el.alertErrorP2.style.display = 'block';
       }
     } finally {
-      isSubmitting = false;
-      setLoadingState(false);
+      setPage2Loading(false);
     }
   }
 
-  function setLoadingState(loading) {
-    if (!el.btnPlaceOrder) return;
-    el.btnPlaceOrder.disabled = loading;
-    if (el.btnText) el.btnText.style.display = loading ? 'none' : 'inline';
-    if (el.btnSpinner) el.btnSpinner.style.display = loading ? 'inline-flex' : 'none';
+  function setPage2Loading(loading) {
+    isSubmitting = loading;
+    if (el.btnP2Spinner) el.btnP2Spinner.style.display = loading ? 'inline-flex' : 'none';
+    if (el.btnP2Text) el.btnP2Text.style.display = loading ? 'none' : 'inline';
+    if (el.btnGotoStep3) el.btnGotoStep3.disabled = loading;
   }
 
-  // -------------------------------------------------------------
-  // POST-ORDER SUCCESS VIEW
-  // -------------------------------------------------------------
-  function renderSuccessState(order, waUrl, fileObj) {
-    // Hide Form, Show Success
-    if (el.form) el.form.style.display = 'none';
-    if (el.successView) el.successView.style.display = 'block';
+  // =========================================================================
+  // PAGE 3: WHATSAPP ORDER SUBMISSION
+  // =========================================================================
+  function renderPage3WhatsApp() {
+    if (!activeOrder) return;
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const ord = activeOrder;
+    const origin = window.location.origin;
 
-    if (el.successOrderId) el.successOrderId.textContent = order.order_number;
-    if (el.successCustName) el.successCustName.textContent = order.customer_name;
-    if (el.successCustPhone) el.successCustPhone.textContent = order.customer_phone;
-    if (el.successCustAddress) el.successCustAddress.textContent = order.shipping_address;
-    if (el.successSubtotal) el.successSubtotal.textContent = `₹${Number(order.subtotal).toLocaleString('en-IN')}`;
-    if (el.successDelivery) el.successDelivery.textContent = `₹${Number(order.delivery_charge || 99).toLocaleString('en-IN')}`;
-    if (el.successTotal) el.successTotal.textContent = `₹${Number(order.total_amount).toLocaleString('en-IN')}`;
+    if (el.waOrderIdBadge) el.waOrderIdBadge.textContent = `ORDER: ${ord.orderId}`;
+    if (el.waSummaryName) el.waSummaryName.textContent = ord.customer.name;
+    if (el.waSummaryPhone) el.waSummaryPhone.textContent = `+91 ${ord.customer.phone}`;
+    if (el.waSummaryAddress) el.waSummaryAddress.textContent = formatFullAddress(ord.customer);
+    if (el.waSummarySubtotal) el.waSummarySubtotal.textContent = `₹${ord.subtotal.toLocaleString('en-IN')}`;
+    if (el.waSummaryDelivery) el.waSummaryDelivery.textContent = `₹${ord.delivery}`;
+    if (el.waSummaryGrandTotal) el.waSummaryGrandTotal.textContent = `₹${ord.total.toLocaleString('en-IN')}`;
 
-    // WhatsApp Action Link
-    if (el.btnSuccessWa) {
-      el.btnSuccessWa.href = waUrl;
+    // Screenshot Thumbnail
+    if (el.waScreenshotImg) {
+      el.waScreenshotImg.src = ord.screenshotPreview || ord.screenshotUrl;
     }
 
-    // Download Screenshot Button
-    if (el.btnSuccessDownloadSs) {
-      el.btnSuccessDownloadSs.onclick = () => {
-        downloadScreenshot(order, fileObj);
-      };
-    }
-
-    // Render Ordered Products
-    if (el.successProductsList) {
-      const origin = window.location.origin || 'https://accessify-xi.vercel.app';
-      el.successProductsList.innerHTML = (order.items || []).map(it => {
-        const prodSlug = it.slug || it.productId || it.id || '';
-        const prodUrl = `${origin}/product/${encodeURIComponent(prodSlug)}`;
-        const varTxt = it.variant ? `<span style="color:#a1a1aa;"> &bull; ${escapeHtml(it.variant)}</span>` : '';
-        const itemTotal = Number(it.total || (it.price * it.qty)).toLocaleString('en-IN');
-
-        return `
-          <div class="success-product-card">
-            <div class="success-product-info">
-              <h4 class="success-product-name">${escapeHtml(it.name)}${varTxt}</h4>
-              <div class="success-product-meta">Qty: <strong>${it.qty}</strong> &bull; ₹${Number(it.price).toLocaleString('en-IN')} each</div>
-              <a href="${prodUrl}" target="_blank" rel="noopener noreferrer" class="success-product-link">
-                ${prodUrl} ↗
-              </a>
-            </div>
-            <div class="success-product-total">₹${itemTotal}</div>
+    // Populate Ordered Items with Direct Links
+    if (el.waSummaryItems) {
+      el.waSummaryItems.innerHTML = '';
+      ord.items.forEach(item => {
+        const itemSlug = item.slug || (item.title ? item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '');
+        const directLink = `${origin}/product/${itemSlug}`;
+        const itemEl = document.createElement('div');
+        itemEl.className = 'wa-item-card';
+        itemEl.innerHTML = `
+          <div class="wa-item-img">
+            <img src="${item.image || '/assets/images/accessify-logo.png'}" alt="${item.title}" onerror="this.src='/assets/images/accessify-logo.png'">
+          </div>
+          <div class="wa-item-info">
+            <span class="wa-item-name">${item.title}</span>
+            <div class="wa-item-meta">Qty: ${item.quantity} &bull; Price: ₹${(item.price * item.quantity).toLocaleString('en-IN')}</div>
+            <a href="${directLink}" target="_blank" rel="noopener noreferrer" class="wa-item-link">${directLink}</a>
           </div>
         `;
-      }).join('');
+        el.waSummaryItems.appendChild(itemEl);
+      });
+    }
+
+    // Build WhatsApp Order Message
+    const waText = buildWhatsAppOrderMessage(ord, origin);
+    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waText)}`;
+
+    if (el.btnSendWhatsapp) {
+      el.btnSendWhatsapp.setAttribute('href', waUrl);
+    }
+
+    // Setup Screenshot Download
+    if (el.btnDownloadScreenshot) {
+      el.btnDownloadScreenshot.onclick = () => {
+        downloadScreenshot(ord.screenshotPreview || ord.screenshotUrl, `ACCESSIFY-Payment-${ord.orderId}.jpg`);
+      };
     }
   }
 
-  function downloadScreenshot(order, fileObj) {
-    const filename = `ACCESSIFY-Payment-${order.order_number || 'receipt'}.jpg`;
-    if (fileObj) {
-      const blobUrl = URL.createObjectURL(fileObj);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-      showToast('Payment screenshot downloaded!');
-      return;
+  function buildWhatsAppOrderMessage(ord, origin) {
+    const lines = [];
+    lines.push('*ACCESSIFY — NEW ORDER* 💎');
+    lines.push('────────────────────────');
+    lines.push(`*Order ID:* ${ord.orderId}`);
+    lines.push(`*Customer Name:* ${ord.customer.name}`);
+    lines.push(`*Phone:* +91 ${ord.customer.phone}`);
+    if (ord.customer.email) lines.push(`*Email:* ${ord.customer.email}`);
+    lines.push('');
+    lines.push('*DELIVERY ADDRESS* 📍');
+    lines.push(formatFullAddress(ord.customer));
+    lines.push('');
+    lines.push('*ORDERED PRODUCTS* 🛍️');
+
+    ord.items.forEach((item, index) => {
+      const slug = item.slug || (item.title ? item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '');
+      const link = `${origin}/product/${slug}`;
+      lines.push(`${index + 1}. *${item.title}*`);
+      lines.push(`   Quantity: ${item.quantity}`);
+      lines.push(`   Price: ₹${(item.price * item.quantity).toLocaleString('en-IN')}`);
+      lines.push(`   Product Link: ${link}`);
+    });
+
+    lines.push('');
+    lines.push('────────────────────────');
+    lines.push(`*Product Subtotal:* ₹${ord.subtotal.toLocaleString('en-IN')}`);
+    lines.push(`*Pan-India Express Delivery:* ₹${ord.delivery}`);
+    lines.push(`*GRAND TOTAL PAYABLE:* ₹${ord.total.toLocaleString('en-IN')}`);
+    lines.push('────────────────────────');
+    lines.push(`*Payment Mode:* UPI to renjudinob@okaxis`);
+    lines.push('*Payment Status:* Screenshot Attached 📎');
+    lines.push('');
+    lines.push('⚠️ *Note:* I have attached my payment screenshot with this message for instant verification.');
+
+    return lines.join('\n');
+  }
+
+  function downloadScreenshot(url, filename) {
+    if (!url) return;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('Payment screenshot downloaded!');
+  }
+
+  // =========================================================================
+  // PAGE 4: ORDER DETAILS CONFIRMATION
+  // =========================================================================
+  function renderPage4OrderDetails() {
+    if (!activeOrder) return;
+
+    const ord = activeOrder;
+    const origin = window.location.origin;
+
+    if (el.finalOrderId) el.finalOrderId.textContent = ord.orderId;
+    if (el.finalCustName) el.finalCustName.textContent = ord.customer.name;
+    if (el.finalCustPhone) el.finalCustPhone.textContent = `+91 ${ord.customer.phone}`;
+    if (el.finalCustAddress) el.finalCustAddress.textContent = formatFullAddress(ord.customer);
+    if (el.finalSubtotal) el.finalSubtotal.textContent = `₹${ord.subtotal.toLocaleString('en-IN')}`;
+    if (el.finalDelivery) el.finalDelivery.textContent = `₹${ord.delivery}`;
+    if (el.finalGrandTotal) el.finalGrandTotal.textContent = `₹${ord.total.toLocaleString('en-IN')}`;
+
+    // Final Items List
+    if (el.finalItemsList) {
+      el.finalItemsList.innerHTML = '';
+      ord.items.forEach(item => {
+        const itemRow = document.createElement('div');
+        itemRow.className = 'final-item-row';
+        itemRow.innerHTML = `
+          <div class="final-item-main">
+            <img src="${item.image || '/assets/images/accessify-logo.png'}" alt="${item.title}" class="final-item-thumb" onerror="this.src='/assets/images/accessify-logo.png'">
+            <div>
+              <span class="final-item-title">${item.title}</span>
+              <span class="final-item-qty">Qty: ${item.quantity}</span>
+            </div>
+          </div>
+          <span class="final-item-price">₹${(item.price * item.quantity).toLocaleString('en-IN')}</span>
+        `;
+        el.finalItemsList.appendChild(itemRow);
+      });
     }
 
-    if (order.payment_screenshot) {
-      fetch(order.payment_screenshot)
-        .then(r => r.blob())
-        .then(blob => {
-          const blobUrl = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = blobUrl;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-          showToast('Payment screenshot downloaded!');
-        })
-        .catch(() => {
-          window.open(order.payment_screenshot, '_blank');
-        });
+    // Reopen WhatsApp button
+    if (el.btnFinalWa) {
+      const waText = buildWhatsAppOrderMessage(ord, origin);
+      el.btnFinalWa.setAttribute('href', `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waText)}`);
+    }
+
+    // Clear cart so next visit starts fresh
+    try {
+      localStorage.removeItem('accessify_cart_v1');
+    } catch (_) { }
+  }
+
+  // =========================================================================
+  // EVENT LISTENERS & COPY UTILITIES
+  // =========================================================================
+  function setupEventListeners() {
+    // Page 1 Input Auto-save
+    const p1Inputs = [
+      el.inputName, el.inputPhone, el.inputHouse, el.inputStreet,
+      el.inputCity, el.inputDistrict, el.inputState, el.inputPincode,
+      el.inputLandmark, el.inputEmail
+    ];
+    p1Inputs.forEach(input => {
+      if (!input) return;
+      input.addEventListener('input', () => {
+        saveCustomerToStorage();
+        if (input.style.borderColor) input.style.borderColor = '';
+      });
+    });
+
+    // Page 1: Continue Button
+    if (el.btnGotoStep2) {
+      el.btnGotoStep2.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (validatePage1()) {
+          saveCustomerToStorage();
+          goToStep(2);
+        }
+      });
+    }
+
+    // Page 2: Back Button
+    if (el.btnBackToStep1) {
+      el.btnBackToStep1.addEventListener('click', (e) => {
+        e.preventDefault();
+        goToStep(1);
+      });
+    }
+
+    // Page 2: Continue to WhatsApp Order Button
+    if (el.btnGotoStep3) {
+      el.btnGotoStep3.addEventListener('click', (e) => {
+        e.preventDefault();
+        submitPaymentAndProceed();
+      });
+    }
+
+    // Page 2: Copy UPI ID
+    if (el.btnCopyUpi) {
+      el.btnCopyUpi.addEventListener('click', () => {
+        copyToClipboard(OFFICIAL_UPI_ID, 'Official UPI ID copied to clipboard!');
+      });
+    }
+
+    // Page 2: Copy Amount
+    if (el.btnCopyAmt) {
+      el.btnCopyAmt.addEventListener('click', () => {
+        const total = getGrandTotal();
+        copyToClipboard(String(total), `Payable amount ₹${total} copied!`);
+      });
+    }
+
+    // Page 3: Back to Payment Button
+    if (el.btnBackToStep2) {
+      el.btnBackToStep2.addEventListener('click', (e) => {
+        e.preventDefault();
+        goToStep(2);
+      });
+    }
+
+    // Page 3: Continue to Order Details Button
+    if (el.btnGotoStep4) {
+      el.btnGotoStep4.addEventListener('click', (e) => {
+        e.preventDefault();
+        goToStep(4);
+      });
+    }
+
+    // Setup Screenshot handlers
+    setupScreenshotHandlers();
+  }
+
+  function copyToClipboard(text, successMsg) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(successMsg);
+      }).catch(() => {
+        fallbackCopy(text, successMsg);
+      });
+    } else {
+      fallbackCopy(text, successMsg);
     }
   }
 
-  // -------------------------------------------------------------
-  // UTILITIES
-  // -------------------------------------------------------------
-  function showToast(msg) {
+  function fallbackCopy(text, successMsg) {
+    const input = document.createElement('input');
+    input.value = text;
+    document.body.appendChild(input);
+    input.select();
+    try {
+      document.execCommand('copy');
+      showToast(successMsg);
+    } catch (_) { }
+    document.body.removeChild(input);
+  }
+
+  function showToast(message) {
     if (!el.toastContainer) return;
     const toast = document.createElement('div');
     toast.className = 'checkout-toast';
-    toast.textContent = msg;
+    toast.textContent = message;
     el.toastContainer.appendChild(toast);
     setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateY(8px)';
-      setTimeout(() => toast.remove(), 300);
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
     }, 3000);
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  // Run on DOM ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
   }
 
 })();
