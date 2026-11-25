@@ -41,7 +41,7 @@
     upiName: 'ACCESSIFY',
     whatsappNumber: '917012400815',
     deliveryCharge: 99,
-    qrImage: '/assets/images/renjudinob-upi-qr.jpg'
+    qrImage: '/assets/images/accessify-upi-payment-qr.png'
   };
 
   // Selected screenshot file for checkout
@@ -1074,7 +1074,7 @@ Please provide more details about availability and ordering.`;
         const fetchedWa = (json.whatsappNumber || '').trim();
         paymentConfig.whatsappNumber = (fetchedWa && fetchedWa !== '917012408015') ? fetchedWa : '917012400815';
         paymentConfig.deliveryCharge = Number(json.deliveryCharge !== undefined ? json.deliveryCharge : 99);
-        paymentConfig.qrImage = json.qrImage || '/assets/images/renjudinob-upi-qr.jpg';
+        paymentConfig.qrImage = json.qrImage || '/assets/images/accessify-upi-payment-qr.png';
       }
     } catch (_) { }
   }

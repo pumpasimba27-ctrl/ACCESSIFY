@@ -378,27 +378,42 @@
             <span class="upi-intent-sub">Opens Google Pay, PhonePe, Paytm, or CRED directly</span>
           </div>
 
-          <!-- UPI ID & Copy Details Box -->
+          <!-- Official UPI Payment Details Box -->
           <div class="upi-details-card">
-            <div class="upi-meta-info">
-              <span class="upi-label">OFFICIAL UPI ID</span>
-              <span class="upi-id-value" id="p2-upi-id-display">renjudinob@okaxis</span>
-              <span class="upi-name-value">Account Name: <strong>ACCESSIFY</strong></span>
-            </div>
-            <div class="upi-copy-row">
-              <button type="button" class="btn-copy-chip" id="btn-copy-upi">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-                <span>Copy UPI ID</span>
-              </button>
-              <button type="button" class="btn-copy-chip" id="btn-copy-amt">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M6 3h12l4 6-10 13L2 9z"></path>
-                </svg>
-                <span>Copy Amount</span>
-              </button>
+            <div class="upi-meta-table">
+              <div class="upi-meta-row">
+                <span class="upi-field-label">Pay to</span>
+                <span class="upi-field-value strong-val">ACCESSIFY</span>
+              </div>
+              <div class="upi-meta-row upi-id-line">
+                <span class="upi-field-label">UPI ID</span>
+                <div class="upi-id-action-wrap">
+                  <span class="upi-field-value upi-id-highlight" id="p2-upi-id-display">renjudinob@okaxis</span>
+                  <button type="button" class="btn-copy-chip" id="btn-copy-upi" aria-label="Copy UPI ID" title="Copy UPI ID">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span>Copy UPI ID</span>
+                  </button>
+                </div>
+              </div>
+              <div class="upi-meta-row">
+                <span class="upi-field-label">Delivery Charge</span>
+                <span class="upi-field-value delivery-charge-val">₹99 <span class="upi-subnote">(Pan-India)</span></span>
+              </div>
+              <div class="upi-meta-row total-highlight-row">
+                <span class="upi-field-label total-label-text">Total Amount</span>
+                <div class="upi-amt-action-wrap">
+                  <span class="upi-field-value total-val" id="p2-total-amt-display">₹0</span>
+                  <button type="button" class="btn-copy-chip" id="btn-copy-amt" aria-label="Copy Amount" title="Copy Amount">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M6 3h12l4 6-10 13L2 9z"></path>
+                    </svg>
+                    <span>Copy Amount</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -408,15 +423,15 @@
               <span>SCAN QR TO PAY WITH ANY UPI APP</span>
             </div>
             <div class="qr-frame-box">
-              <img src="/assets/images/renjudinob-upi-qr.jpg" alt="UPI Payment QR Code" id="checkout-qr-img"
-                class="checkout-qr-img">
+              <img src="/api/upi-qr" alt="ACCESSIFY UPI Payment QR Code" id="checkout-qr-img"
+                class="checkout-qr-img" loading="eager" onerror="this.src='/assets/images/accessify-upi-payment-qr.png'">
             </div>
             <div class="qr-amount-pill">
               <span>Payable Amount:</span>
               <strong id="qr-amount-display">₹0</strong>
             </div>
             <p class="qr-helper-text">
-              Scan with Google Pay, PhonePe, Paytm, BHIM, or any banking app. Once paid, upload your screenshot below.
+              Scan with Google Pay, PhonePe, Paytm, BHIM, or any UPI app. Once paid, upload your screenshot below.
             </p>
           </div>
 

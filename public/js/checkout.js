@@ -84,6 +84,7 @@
     p2UpiIdDisplay: document.getElementById('p2-upi-id-display'),
     btnCopyUpi: document.getElementById('btn-copy-upi'),
     btnCopyAmt: document.getElementById('btn-copy-amt'),
+    p2TotalAmtDisplay: document.getElementById('p2-total-amt-display'),
     checkoutQrImg: document.getElementById('checkout-qr-img'),
     qrAmountDisplay: document.getElementById('qr-amount-display'),
     screenshotDropzone: document.getElementById('screenshot-dropzone'),
@@ -562,10 +563,21 @@
     if (el.calcTotalVal) el.calcTotalVal.textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
     if (el.qrAmountDisplay) el.qrAmountDisplay.textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
     if (el.p2UpiIdDisplay) el.p2UpiIdDisplay.textContent = OFFICIAL_UPI_ID;
+    if (el.p2TotalAmtDisplay) el.p2TotalAmtDisplay.textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
 
-    // Mobile UPI Intent Deep Link
+    // Update dynamic UPI QR Code with exact total amount pre-filled
+    if (el.checkoutQrImg) {
+      const dynamicQrUrl = `/api/upi-qr?amount=${encodeURIComponent(grandTotal)}&upi_id=${encodeURIComponent(OFFICIAL_UPI_ID)}&name=${encodeURIComponent(OFFICIAL_ACCOUNT_NAME)}&v=${encodeURIComponent(grandTotal)}`;
+      el.checkoutQrImg.src = dynamicQrUrl;
+      el.checkoutQrImg.onerror = function () {
+        this.onerror = null;
+        this.src = '/assets/images/accessify-upi-payment-qr.png';
+      };
+    }
+
+    // Mobile UPI Intent Deep Link (NPCI specification with unencoded '@' in pa for banking apps)
     if (el.btnUpiIntent) {
-      const upiUrl = `upi://pay?pa=${encodeURIComponent(OFFICIAL_UPI_ID)}&pn=${encodeURIComponent(OFFICIAL_ACCOUNT_NAME)}&am=${grandTotal}&cu=INR&tn=${encodeURIComponent('ACCESSIFY Order')}`;
+      const upiUrl = `upi://pay?pa=${OFFICIAL_UPI_ID}&pn=${encodeURIComponent(OFFICIAL_ACCOUNT_NAME)}&am=${grandTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent('ACCESSIFY Order')}`;
       el.btnUpiIntent.setAttribute('href', upiUrl);
     }
   }

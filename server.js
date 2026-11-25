@@ -478,15 +478,16 @@ app.get('/api/upi-qr', async (req, res) => {
     const amount = req.query.amount ? Number(req.query.amount) : null;
     const note = 'ACCESSIFY Order';
 
-    let upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(upiName)}&cu=INR&tn=${encodeURIComponent(note)}`;
+    // NPCI standard UPI format: pa must keep literal '@' for mobile UPI apps
+    let upiUri = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&cu=INR&tn=${encodeURIComponent(note)}`;
     if (amount && !isNaN(amount) && amount > 0) {
       upiUri += `&am=${amount.toFixed(2)}`;
     }
 
     const qrBuffer = await QRCode.toBuffer(upiUri, {
-      width: 500,
-      margin: 2,
-      errorCorrectionLevel: 'H',
+      width: 600,
+      margin: 4,
+      errorCorrectionLevel: 'M',
       color: {
         dark: '#000000',
         light: '#ffffff'
@@ -494,7 +495,7 @@ app.get('/api/upi-qr', async (req, res) => {
     });
 
     res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Cache-Control', 'public, max-age=300');
     res.send(qrBuffer);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
