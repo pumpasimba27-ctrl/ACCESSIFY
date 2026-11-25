@@ -553,6 +553,7 @@ app.post('/api/upload-payment-proof', upload.single('screenshot'), async (req, r
     res.status(201).json({
       success: true,
       url: publicUrl,
+      imageUrl: publicUrl,
       filename
     });
   } catch (err) {

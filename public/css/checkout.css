@@ -64,9 +64,13 @@ a {
   text-decoration: none;
 }
 
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font-family: inherit;
-  font-size: 16px; /* Prevents auto-zoom on iOS Safari */
+  font-size: 16px;
+  /* Prevents auto-zoom on iOS Safari */
   color: inherit;
 }
 
@@ -611,8 +615,13 @@ img {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Trust Row */
@@ -943,7 +952,8 @@ img {
   border: none;
   cursor: pointer;
   display: inline-block;
-  pointer-events: none; /* Allows dropzone click to propagate */
+  pointer-events: none;
+  /* Allows dropzone click to propagate */
 }
 
 /* Screenshot Preview Card */
@@ -1681,6 +1691,7 @@ img {
    RESPONSIVE DESIGN (MOBILE-FIRST BREAKPOINTS: 320px, 375px, 430px, 640px+)
    -------------------------------------------------------------------------- */
 @media (max-width: 640px) {
+
   /* On small mobile screens, show the clean live pill and hide the multi-step desktop bar */
   .checkout-progress-inner {
     display: none;
@@ -1713,7 +1724,21 @@ img {
   }
 
   .page-actions-split {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .page-actions-split .btn-primary-action {
+    order: 1;
+    min-height: 52px;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+  }
+
+  .page-actions-split .btn-secondary-action {
+    order: 2;
+    min-height: 48px;
   }
 
   .upi-details-card {
@@ -1750,6 +1775,7 @@ img {
 }
 
 @media (max-width: 360px) {
+
   /* Ultra-small phones (e.g. 320px Galaxy Fold / iPhone SE) */
   .checkout-card {
     padding: 1rem 0.75rem;

@@ -424,8 +424,8 @@
             </div>
 
             <!-- Upload Dropzone -->
-            <div class="screenshot-dropzone" id="screenshot-dropzone">
-              <input type="file" id="screenshot-input" accept="image/jpeg,image/png,image/webp" style="display: none;">
+            <div class="screenshot-dropzone" id="screenshot-dropzone" role="button" tabindex="0" aria-label="Upload payment screenshot">
+              <input type="file" id="screenshot-input" accept="image/*,image/jpeg,image/png,image/webp,image/heic,image/heif" style="display: none;">
               <div class="dropzone-body" id="dropzone-click-trigger">
                 <div class="dropzone-icon">
                   <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -436,7 +436,7 @@
                 </div>
                 <div class="dropzone-text">
                   <span class="dropzone-title">Upload Payment Screenshot</span>
-                  <span class="dropzone-hint">JPG, PNG, WEBP up to 10 MB</span>
+                  <span class="dropzone-hint">JPG, PNG, WEBP, HEIC up to 10 MB</span>
                 </div>
                 <button type="button" class="btn-browse-file" id="btn-browse-file">SELECT IMAGE</button>
               </div>
@@ -470,8 +470,8 @@
             <button type="button" class="btn-secondary-action" id="btn-back-to-step-1">
               <span>← Back to Address</span>
             </button>
-            <button type="button" class="btn-primary-action" id="btn-goto-step-3">
-              <span id="btn-p2-text">CONTINUE TO WHATSAPP ORDER →</span>
+            <button type="button" class="btn-primary-action btn-place-order" id="btn-goto-step-3" aria-label="Place Order">
+              <span id="btn-p2-text">PLACE ORDER</span>
               <span class="btn-spinner" id="btn-p2-spinner" style="display: none;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin-icon">
                   <line x1="12" y1="2" x2="12" y2="6"></line>
@@ -481,7 +481,7 @@
                   <line x1="2" y1="12" x2="6" y2="12"></line>
                   <line x1="18" y1="12" x2="22" y2="12"></line>
                 </svg>
-                Saving...
+                Placing Order...
               </span>
             </button>
           </div>

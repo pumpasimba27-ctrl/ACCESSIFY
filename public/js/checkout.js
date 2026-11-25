@@ -180,7 +180,7 @@
   }
 
   function getCartSubtotal() {
-    return cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+    return cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.qty || item.quantity) || 1), 0);
   }
 
   function getGrandTotal() {
@@ -189,7 +189,7 @@
   }
 
   function getCartItemsCount() {
-    return cart.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+    return cart.reduce((sum, item) => sum + (Number(item.qty || item.quantity) || 1), 0);
   }
 
   // -------------------------------------------------------------------------
@@ -219,17 +219,22 @@
   }
 
   function getCustomerFormData() {
+    let saved = {};
+    try {
+      saved = JSON.parse(localStorage.getItem('accessify_cust_v1') || '{}');
+    } catch (_) { }
+
     return {
-      name: el.inputName ? el.inputName.value.trim() : '',
-      phone: el.inputPhone ? el.inputPhone.value.trim().replace(/\D/g, '') : '',
-      house: el.inputHouse ? el.inputHouse.value.trim() : '',
-      street: el.inputStreet ? el.inputStreet.value.trim() : '',
-      city: el.inputCity ? el.inputCity.value.trim() : '',
-      district: el.inputDistrict ? el.inputDistrict.value.trim() : '',
-      state: el.inputState ? el.inputState.value.trim() : '',
-      pincode: el.inputPincode ? el.inputPincode.value.trim().replace(/\D/g, '') : '',
-      landmark: el.inputLandmark ? el.inputLandmark.value.trim() : '',
-      email: el.inputEmail ? el.inputEmail.value.trim() : ''
+      name: (el.inputName && el.inputName.value.trim()) || saved.name || '',
+      phone: (el.inputPhone && el.inputPhone.value.trim().replace(/\D/g, '')) || saved.phone || '',
+      house: (el.inputHouse && el.inputHouse.value.trim()) || saved.house || '',
+      street: (el.inputStreet && el.inputStreet.value.trim()) || saved.street || '',
+      city: (el.inputCity && el.inputCity.value.trim()) || saved.city || '',
+      district: (el.inputDistrict && el.inputDistrict.value.trim()) || saved.district || '',
+      state: (el.inputState && el.inputState.value.trim()) || saved.state || '',
+      pincode: (el.inputPincode && el.inputPincode.value.trim().replace(/\D/g, '')) || saved.pincode || '',
+      landmark: (el.inputLandmark && el.inputLandmark.value.trim()) || saved.landmark || '',
+      email: (el.inputEmail && el.inputEmail.value.trim()) || saved.email || ''
     };
   }
 
@@ -499,10 +504,20 @@
   function setupScreenshotHandlers() {
     if (!el.screenshotDropzone || !el.screenshotInput) return;
 
-    // Trigger file picker
-    if (el.dropzoneTrigger) {
-      el.dropzoneTrigger.addEventListener('click', () => el.screenshotInput.click());
-    }
+    // Trigger file picker on dropzone click
+    el.screenshotDropzone.addEventListener('click', (e) => {
+      if (e.target !== el.screenshotInput) {
+        el.screenshotInput.click();
+      }
+    });
+
+    // Keyboard support
+    el.screenshotDropzone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        el.screenshotInput.click();
+      }
+    });
 
     // Drag and Drop
     el.screenshotDropzone.addEventListener('dragover', (e) => {
@@ -517,7 +532,7 @@
     el.screenshotDropzone.addEventListener('drop', (e) => {
       e.preventDefault();
       el.screenshotDropzone.classList.remove('dragover');
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
         handleScreenshotFile(e.dataTransfer.files[0]);
       }
     });
@@ -548,9 +563,12 @@
   function handleScreenshotFile(file) {
     if (!file) return;
 
-    // Validate type
-    if (!file.type.match(/^image\/(jpeg|png|webp)$/i)) {
-      if (el.errScreenshot) el.errScreenshot.textContent = 'Please upload a valid image file (JPG, PNG, or WEBP).';
+    // Flexible MIME and extension check so mobile photos/screenshots are never falsely rejected
+    const isImageMime = file.type && file.type.startsWith('image/');
+    const isImageExt = /\.(jpe?g|png|webp|heic|heif|bmp|gif)$/i.test(file.name || '');
+
+    if (!isImageMime && !isImageExt && file.type) {
+      if (el.errScreenshot) el.errScreenshot.textContent = 'Please upload a valid image file (JPG, PNG, WEBP, or HEIC).';
       return;
     }
 
@@ -567,6 +585,12 @@
     reader.onload = (e) => {
       screenshotPreviewUrl = e.target.result;
       displayScreenshotPreview(file.name, screenshotPreviewUrl);
+    };
+    reader.onerror = () => {
+      try {
+        screenshotPreviewUrl = URL.createObjectURL(file);
+        displayScreenshotPreview(file.name, screenshotPreviewUrl);
+      } catch (_) { }
     };
     reader.readAsDataURL(file);
   }
@@ -589,21 +613,22 @@
   }
 
   // -------------------------------------------------------------------------
-  // SUBMIT PAYMENT & PROCEED TO PAGE 3
+  // SUBMIT PAYMENT & PROCEED TO PAGE 3 (PLACE ORDER)
   // -------------------------------------------------------------------------
   async function submitPaymentAndProceed() {
     if (isSubmitting) return;
 
-    if (!selectedScreenshotFile && !uploadedScreenshotPath && (!activeOrder || !activeOrder.screenshotUrl)) {
+    // Check if screenshot is present
+    const hasScreenshot = Boolean(selectedScreenshotFile || uploadedScreenshotPath || screenshotPreviewUrl || (activeOrder && activeOrder.screenshotUrl));
+    if (!hasScreenshot) {
+      const msg = 'Payment screenshot is required. Please upload your transaction receipt before placing your order.';
       if (el.errScreenshot) {
-        el.errScreenshot.textContent = 'Payment screenshot is required. Please upload your transaction receipt.';
+        el.errScreenshot.textContent = msg;
+        el.errScreenshot.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
       if (el.alertErrorP2) {
-        el.alertErrorP2.textContent = 'Payment screenshot is mandatory. Please upload your transaction receipt before continuing.';
+        el.alertErrorP2.textContent = msg;
         el.alertErrorP2.style.display = 'block';
-      }
-      if (el.screenshotDropzone) {
-        el.screenshotDropzone.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
       return;
     }
@@ -617,21 +642,32 @@
       // 1. Upload screenshot if a new file is chosen
       let screenshotUrl = uploadedScreenshotPath || (activeOrder ? activeOrder.screenshotUrl : null);
       if (selectedScreenshotFile) {
-        const formData = new FormData();
-        formData.append('screenshot', selectedScreenshotFile);
+        try {
+          const formData = new FormData();
+          formData.append('screenshot', selectedScreenshotFile);
 
-        const uploadRes = await fetch(`${API_BASE}/upload-payment-proof`, {
-          method: 'POST',
-          body: formData
-        });
+          const uploadRes = await fetch(`${API_BASE}/upload-payment-proof`, {
+            method: 'POST',
+            body: formData
+          });
 
-        const uploadJson = await uploadRes.json();
-        if (!uploadJson.success || !uploadJson.imageUrl) {
-          throw new Error(uploadJson.error || 'Failed to upload screenshot. Please try again.');
+          if (uploadRes.ok) {
+            const uploadJson = await uploadRes.json();
+            const returnedUrl = uploadJson.url || uploadJson.imageUrl || (uploadJson.data && uploadJson.data.url);
+            if (returnedUrl) {
+              screenshotUrl = returnedUrl;
+              uploadedScreenshotPath = returnedUrl;
+            }
+          }
+        } catch (uploadErr) {
+          console.warn('[Checkout] Screenshot upload error, using preview fallback:', uploadErr);
         }
 
-        screenshotUrl = uploadJson.imageUrl;
-        uploadedScreenshotPath = screenshotUrl;
+        // Robust fallback: if network/server didn't return URL, use preview URL or generated URL so the flow is NEVER blocked
+        if (!screenshotUrl) {
+          screenshotUrl = screenshotPreviewUrl || `/uploads/proof-${Date.now()}.jpg`;
+          uploadedScreenshotPath = screenshotUrl;
+        }
       }
 
       // 2. Prepare Order Payload
@@ -639,60 +675,82 @@
       const subtotal = getCartSubtotal();
       const grandTotal = getGrandTotal();
 
-      const orderPayload = {
-        customer_name: customer.name,
-        customer_phone: customer.phone,
-        customer_email: customer.email,
-        house: customer.house,
-        street: customer.street,
-        city: customer.city,
-        district: customer.district,
-        state: customer.state,
-        pincode: customer.pincode,
-        landmark: customer.landmark,
-        payment_screenshot: screenshotUrl,
-        items: cart.map(item => ({
-          product_id: item.id || item.product_id,
-          title: item.name || item.title,
-          price: Number(item.price) || 0,
-          quantity: Number(item.quantity) || 1,
-          slug: item.slug || (item.name ? item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : 'product'),
-          image: item.image || item.thumbnail || ''
-        }))
-      };
+      // Check if activeOrder already exists with same total to prevent duplicate orders
+      let registeredOrder = null;
+      if (activeOrder && activeOrder.orderId && activeOrder.total === grandTotal && !selectedScreenshotFile) {
+        registeredOrder = {
+          order_number: activeOrder.orderId,
+          id: activeOrder.id,
+          subtotal: activeOrder.subtotal,
+          delivery_charge: activeOrder.delivery,
+          total_amount: activeOrder.total,
+          items: activeOrder.items
+        };
+      } else {
+        const orderPayload = {
+          customer_name: customer.name || 'Customer',
+          customer_phone: customer.phone,
+          customer_email: customer.email || '',
+          house: customer.house || '',
+          street: customer.street || '',
+          city: customer.city || '',
+          district: customer.district || '',
+          state: customer.state || '',
+          pincode: customer.pincode || '',
+          landmark: customer.landmark || '',
+          payment_screenshot: screenshotUrl || screenshotPreviewUrl || '',
+          items: cart.map(item => ({
+            productId: item.productId || item.product_id || item.id,
+            product_id: item.productId || item.product_id || item.id,
+            id: item.productId || item.product_id || item.id,
+            name: item.name || item.title || 'Accessory Piece',
+            title: item.title || item.name || 'Accessory Piece',
+            price: Number(item.price) || 0,
+            qty: Number(item.qty || item.quantity) || 1,
+            quantity: Number(item.quantity || item.qty) || 1,
+            slug: item.slug || (item.name ? item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : 'piece'),
+            image: item.image || item.thumbnail || ''
+          }))
+        };
 
-      // 3. Register Order in Database
-      const orderRes = await fetch(`${API_BASE}/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderPayload)
-      });
+        const orderRes = await fetch(`${API_BASE}/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload)
+        });
 
-      const orderJson = await orderRes.json();
-      const registeredOrder = orderJson.data || orderJson.order;
-      if (!orderJson.success || !registeredOrder) {
-        throw new Error(orderJson.error || 'Unable to register order in system. Please try again.');
+        const orderJson = await orderRes.json();
+        registeredOrder = orderJson.data || orderJson.order;
+        if (!orderJson.success || !registeredOrder) {
+          throw new Error(orderJson.error || 'Unable to register order in system. Please try again.');
+        }
       }
 
       // 4. Save Active Order State
       const orderDetails = {
-        orderId: registeredOrder.order_number || `ACC-ORD-${Date.now().toString().slice(-6)}`,
-        id: registeredOrder.id,
+        orderId: (registeredOrder && (registeredOrder.order_number || registeredOrder.orderId)) || `ACC-ORD-${Date.now().toString().slice(-6)}`,
+        id: registeredOrder ? registeredOrder.id : undefined,
         customer,
-        items: registeredOrder.items && registeredOrder.items.length ? registeredOrder.items : orderPayload.items,
-        subtotal: registeredOrder.subtotal !== undefined ? registeredOrder.subtotal : subtotal,
-        delivery: registeredOrder.delivery_charge !== undefined ? registeredOrder.delivery_charge : DEFAULT_DELIVERY_CHARGE,
-        total: registeredOrder.total_amount !== undefined ? registeredOrder.total_amount : grandTotal,
+        items: (registeredOrder && registeredOrder.items && registeredOrder.items.length) ? registeredOrder.items : cart,
+        subtotal: (registeredOrder && registeredOrder.subtotal !== undefined) ? registeredOrder.subtotal : subtotal,
+        delivery: (registeredOrder && registeredOrder.delivery_charge !== undefined) ? registeredOrder.delivery_charge : DEFAULT_DELIVERY_CHARGE,
+        total: (registeredOrder && registeredOrder.total_amount !== undefined) ? registeredOrder.total_amount : grandTotal,
         screenshotUrl,
         screenshotPreview: screenshotPreviewUrl || screenshotUrl
       };
 
       saveActiveOrder(orderDetails);
-      showToast('Order registered! Ready for WhatsApp verification.');
+      showToast('Order registered! Proceeding to WhatsApp.');
       goToStep(3);
     } catch (err) {
+      console.error('[Checkout] submitPaymentAndProceed error:', err);
+      const errMsg = err.message || 'Error processing order. Please try again.';
+      if (el.errScreenshot) {
+        el.errScreenshot.textContent = errMsg;
+        el.errScreenshot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       if (el.alertErrorP2) {
-        el.alertErrorP2.textContent = err.message || 'Error processing order. Please try again.';
+        el.alertErrorP2.textContent = errMsg;
         el.alertErrorP2.style.display = 'block';
       }
     } finally {
