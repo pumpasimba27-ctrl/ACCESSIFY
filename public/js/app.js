@@ -1085,87 +1085,8 @@ Please provide more details about availability and ordering.`;
       openCartDrawer();
       return;
     }
-
     closeCartDrawer();
-    await loadPaymentConfig();
-
-    const subtotal = cart.reduce((sum, item) => sum + (Number(item.price || 0) * (Number(item.qty) || 1)), 0);
-    const delivery = Number(paymentConfig.deliveryCharge || 0);
-    const totalAmount = subtotal + delivery;
-
-    // Render Order Summary in Checkout
-    if (el.checkoutItemsSummary) {
-      let sumHtml = '';
-      cart.forEach(it => {
-        sumHtml += `
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; font-size: 0.78rem;">
-            <div style="display:flex; align-items:center; gap:0.5rem; overflow:hidden;">
-              <span style="font-weight:700; color:#fff;">${it.qty}×</span>
-              <span style="color:#e4e4e7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:170px;">${escapeHtml(it.name)}</span>
-              ${it.variant ? `<span style="font-size:0.7rem; color:#a1a1aa;">(${escapeHtml(it.variant)})</span>` : ''}
-            </div>
-            <span style="font-family:var(--font-mono, monospace); font-weight:700; color:#ffffff;">₹${(Number(it.price) * it.qty).toLocaleString('en-IN')}</span>
-          </div>
-        `;
-      });
-      sumHtml += `
-        <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:0.45rem; margin-top:0.45rem; display:flex; justify-content:space-between; font-size:0.82rem; font-weight:800; color:#fff;">
-          <span>Subtotal (${cart.reduce((s, i) => s + i.qty, 0)} items)</span>
-          <span style="font-family:var(--font-mono, monospace);">₹${subtotal.toLocaleString('en-IN')}</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#a1a1aa; margin-top:0.2rem;">
-          <span>Pan-India Delivery</span>
-          <span style="color:#6ee7b7; font-weight:700;">${delivery > 0 ? '₹' + delivery : 'FREE'}</span>
-        </div>
-      `;
-      el.checkoutItemsSummary.innerHTML = sumHtml;
-    }
-
-    // Set Payable Amount
-    if (el.checkoutPayableAmount) {
-      el.checkoutPayableAmount.textContent = `₹${totalAmount.toLocaleString('en-IN')}`;
-    }
-
-    // Set dynamically generated QR with exact order amount and payee name ACCESSIFY
-    if (el.checkoutUpiQrImg) {
-      el.checkoutUpiQrImg.src = `${API_BASE}/upi-qr?amount=${totalAmount}&upi_id=${encodeURIComponent(paymentConfig.upiId || 'renjudinob@okaxis')}&name=ACCESSIFY&t=${Date.now()}`;
-    }
-
-    // Set UPI ID
-    if (el.checkoutUpiIdText) {
-      el.checkoutUpiIdText.textContent = paymentConfig.upiId;
-    }
-
-    // Set Mobile UPI Intent Link
-    if (el.checkoutUpiIntentBtn) {
-      el.checkoutUpiIntentBtn.href = `upi://pay?pa=${encodeURIComponent(paymentConfig.upiId)}&pn=${encodeURIComponent(paymentConfig.upiName)}&am=${totalAmount.toFixed(2)}&cu=INR&tn=${encodeURIComponent('ACCESSIFY Order')}`;
-    }
-
-    // Autofill stored customer details
-    try {
-      const savedCust = JSON.parse(localStorage.getItem('accessify_cust_v1') || '{}');
-      if (savedCust.name) document.getElementById('chk-name').value = savedCust.name;
-      if (savedCust.phone) document.getElementById('chk-phone').value = savedCust.phone;
-      if (savedCust.email) document.getElementById('chk-email').value = savedCust.email;
-      if (savedCust.house) document.getElementById('chk-house').value = savedCust.house;
-      if (savedCust.street) document.getElementById('chk-street').value = savedCust.street;
-      if (savedCust.city) document.getElementById('chk-city').value = savedCust.city;
-      if (savedCust.state) document.getElementById('chk-state').value = savedCust.state;
-      if (savedCust.pincode) document.getElementById('chk-pincode').value = savedCust.pincode;
-      if (savedCust.landmark) document.getElementById('chk-landmark').value = savedCust.landmark;
-    } catch (_) { }
-
-    if (el.checkoutErrorBox) {
-      el.checkoutErrorBox.classList.remove('show');
-      el.checkoutErrorBox.textContent = '';
-    }
-
-    // Open Modal
-    if (el.checkoutModalBackdrop) {
-      el.checkoutModalBackdrop.classList.add('open');
-      el.checkoutModalBackdrop.setAttribute('aria-hidden', 'false');
-      document.body.classList.add('checkout-open');
-    }
+    window.location.href = '/checkout';
   }
 
   function closeCheckoutModal() {
@@ -1821,7 +1742,7 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
       if (activeProduct) {
         addToCart(activeProduct, activeVariant, 1, false);
         closePdpModal();
-        openCheckoutModal();
+        window.location.href = '/checkout';
       }
     });
 
@@ -1843,7 +1764,7 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
       if (activeProduct) {
         addToCart(activeProduct, activeVariant, 1, false);
         closePdpModal();
-        openCheckoutModal();
+        window.location.href = '/checkout';
       }
     });
 
@@ -1878,8 +1799,14 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
     });
 
     // Proceed to Checkout
-    el.cartCheckoutBtn?.addEventListener('click', () => {
-      openCheckoutModal();
+    el.cartCheckoutBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (cart.length === 0) {
+        showToast('Your bag is empty! Please add pieces to checkout.');
+        return;
+      }
+      closeCartDrawer();
+      window.location.href = '/checkout';
     });
 
     // Checkout Modal Close

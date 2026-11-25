@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Checkout | ACCESSIFY — Direct Order & Delivery</title>
+
+  <!-- SEO & Social Meta Tags -->
+  <meta name="description" content="Secure direct checkout for ACCESSIFY premium jewelry and streetwear accessories. Pay via UPI and confirm instantly on WhatsApp.">
+  <meta name="author" content="ACCESSIFY">
+  <meta name="robots" content="noindex, nofollow">
+
+  <!-- Cache-Control Meta Tags -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <link rel="icon" href="/assets/images/accessify-logo.png" type="image/png">
+
+  <!-- Google Fonts: Instrument Sans, Cinzel & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Checkout Stylesheet -->
+  <link rel="stylesheet" href="/css/checkout.css?v=1.0">
+</head>
+
+<body>
+
+  <!-- =======================================================================
+       1. TOP CHECKOUT HEADER
+       ======================================================================= -->
+  <header class="checkout-header">
+    <div class="checkout-header-inner">
+      <a href="/" class="checkout-back-link" aria-label="Return to Store">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        <span>Back to Store</span>
+      </a>
+
+      <a href="/" class="checkout-brand" aria-label="ACCESSIFY Home">
+        <span class="checkout-brand-title">ACCESSIFY</span>
+      </a>
+
+      <div class="checkout-secure-badge">
+        <span class="secure-dot"></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <span>256-Bit Encrypted</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- =======================================================================
+       2. CHECKOUT MAIN CONTENT AREA
+       ======================================================================= -->
+  <main class="checkout-main">
+    <div class="checkout-container">
+
+      <!-- Breadcrumb indicator -->
+      <nav class="checkout-steps-bar" aria-label="Checkout Progress">
+        <div class="step-item completed">
+          <span class="step-num">1</span>
+          <span class="step-label">Bag</span>
+        </div>
+        <span class="step-divider">→</span>
+        <div class="step-item active">
+          <span class="step-num">2</span>
+          <span class="step-label">Delivery & Payment</span>
+        </div>
+        <span class="step-divider">→</span>
+        <div class="step-item" id="step-confirm-indicator">
+          <span class="step-num">3</span>
+          <span class="step-label">Confirmation</span>
+        </div>
+      </nav>
+
+      <!-- EMPTY CART STATE -->
+      <div class="checkout-empty-card" id="checkout-empty" style="display: none;">
+        <div class="empty-icon-wrap">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+        </div>
+        <h2 class="empty-title">YOUR SHOPPING BAG IS EMPTY</h2>
+        <p class="empty-desc">You don't have any pieces in your bag right now. Browse our surgical grade stainless steel archive and limited drops.</p>
+        <a href="/" class="btn-explore-archive">EXPLORE ACCESSIFY VAULT ↗</a>
+      </div>
+
+      <!-- ACTIVE CHECKOUT FORM & SUMMARY (SPACIOUS 2-COLUMN LAYOUT) -->
+      <form id="checkout-form" class="checkout-layout-grid" novalidate>
+
+        <!-- ===================================================================
+             LEFT COLUMN: DELIVERY INFORMATION & CUSTOMER DETAILS
+             =================================================================== -->
+        <section class="checkout-col checkout-col-delivery" aria-labelledby="delivery-heading">
+          
+          <div class="checkout-card">
+            <div class="card-header">
+              <div class="card-step-badge">1</div>
+              <div>
+                <h1 class="card-title" id="delivery-heading">DELIVERY INFORMATION</h1>
+                <p class="card-subtitle">Please enter your complete address for fast pan-India dispatch.</p>
+              </div>
+            </div>
+
+            <!-- Global Error Banner -->
+            <div class="checkout-alert-error" id="checkout-alert-error" role="alert" style="display: none;"></div>
+
+            <div class="form-grid">
+
+              <!-- Full Name -->
+              <div class="form-group full-width">
+                <label for="chk-name" class="form-label">
+                  FULL NAME <span class="req">*</span>
+                </label>
+                <div class="input-wrapper">
+                  <input type="text" id="chk-name" name="name" class="form-input" placeholder="e.g. Renju Dinu" autocomplete="name" required>
+                </div>
+                <span class="field-error" id="err-name"></span>
+              </div>
+
+              <!-- Phone Number -->
+              <div class="form-group">
+                <label for="chk-phone" class="form-label">
+                  PHONE / MOBILE NUMBER <span class="req">*</span>
+                </label>
+                <div class="input-wrapper input-with-prefix">
+                  <span class="input-prefix">+91</span>
+                  <input type="tel" id="chk-phone" name="phone" class="form-input" placeholder="10-digit mobile number" maxlength="10" autocomplete="tel" required>
+                </div>
+                <span class="field-error" id="err-phone"></span>
+              </div>
+
+              <!-- WhatsApp Number (Optional) -->
+              <div class="form-group">
+                <label for="chk-whatsapp" class="form-label">
+                  WHATSAPP NUMBER <span class="opt">(OPTIONAL)</span>
+                </label>
+                <div class="input-wrapper input-with-prefix">
+                  <span class="input-prefix">+91</span>
+                  <input type="tel" id="chk-whatsapp" name="whatsapp" class="form-input" placeholder="Same as phone if empty" maxlength="10">
+                </div>
+                <span class="field-hint">Used for order tracking & dispatch updates.</span>
+              </div>
+
+              <!-- Email (Optional) -->
+              <div class="form-group full-width">
+                <label for="chk-email" class="form-label">
+                  EMAIL ADDRESS <span class="opt">(OPTIONAL)</span>
+                </label>
+                <div class="input-wrapper">
+                  <input type="email" id="chk-email" name="email" class="form-input" placeholder="name@example.com" autocomplete="email">
+                </div>
+              </div>
+
+              <!-- House Name / No. -->
+              <div class="form-group full-width">
+                <label for="chk-house" class="form-label">
+                  HOUSE NAME / NO. / FLAT / BUILDING <span class="req">*</span>
+                </label>
+                <div class="input-wrapper">
+                  <input type="text" id="chk-house" name="house" class="form-input" placeholder="e.g. Green Valley Villa, Flat 4B, Building 12" required>
+                </div>
+                <span class="field-error" id="err-house"></span>
+              </div>
+
+              <!-- Street / Locality -->
+              <div class="form-group full-width">
+                <label for="chk-street" class="form-label">
+                  STREET / LOCALITY / AREA <span class="req">*</span>
+                </label>
+                <div class="input-wrapper">
+                  <input type="text" id="chk-street" name="street" class="form-input" placeholder="e.g. MG Road, Near Central Park" required>
+                </div>
+                <span class="field-error" id="err-street"></span>
+              </div>
+
+              <!-- City -->
+              <div class="form-group">
+                <label for="chk-city" class="form-label">
+                  CITY / TOWN <span class="req">*</span>
+                </label>
+                <div class="input-wrapper">
+                  <input type="text" id="chk-city" name="city" class="form-input" placeholder="e.g. Kochi, Mumbai, Bengaluru" required>
+                </div>
+                <span class="field-error" id="err-city"></span>
+              </div>
+
+              <!-- District -->
+              <div class="form-group">
+                <label for="chk-district" class="form-label">
+                  DISTRICT <span class="req">*</span>
+                </label>
+                <div class="input-wrapper">
+                  <input type="text" id="chk-district" name="district" class="form-input" placeholder="e.g. Ernakulam" required>
+                </div>
+                <span class="field-error" id="err-district"></span>
+              </div>
+
+              <!-- State -->
+              <div class="form-group">
+                <label for="chk-state" class="form-label">
+                  STATE <span class="req">*</span>
+                </label>
+                <div class="input-wrapper">
+                  <select id="chk-state" name="state" class="form-select" required>
+                    <option value="" disabled selected>Select State / UT</option>
+                    <option value="Andhra Pradesh">Andhra Pradesh</option>
+                    <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                    <option value="Assam">Assam</option>
+                    <option value="Bihar">Bihar</option>
+                    <option value="Chandigarh">Chandigarh</option>
+                    <option value="Chhattisgarh">Chhattisgarh</option>
+                    <option value="Delhi">Delhi</option>
+                    <option value="Goa">Goa</option>
+                    <option value="Gujarat">Gujarat</option>
+                    <option value="Haryana">Haryana</option>
+                    <option value="Himachal Pradesh">Himachal Pradesh</option>
+                    <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+                    <option value="Jharkhand">Jharkhand</option>
+                    <option value="Karnataka">Karnataka</option>
+                    <option value="Kerala">Kerala</option>
+                    <option value="Ladakh">Ladakh</option>
+                    <option value="Madhya Pradesh">Madhya Pradesh</option>
+                    <option value="Maharashtra">Maharashtra</option>
+                    <option value="Manipur">Manipur</option>
+                    <option value="Meghalaya">Meghalaya</option>
+                    <option value="Mizoram">Mizoram</option>
+                    <option value="Nagaland">Nagaland</option>
+                    <option value="Odisha">Odisha</option>
+                    <option value="Puducherry">Puducherry</option>
+                    <option value="Punjab">Punjab</option>
+                    <option value="Rajasthan">Rajasthan</option>
+                    <option value="Sikkim">Sikkim</option>
+                    <option value="Tamil Nadu">Tamil Nadu</option>
+                    <option value="Telangana">Telangana</option>
+                    <option value="Tripura">Tripura</option>
+                    <option value="Uttar Pradesh">Uttar Pradesh</option>
+                    <option value="Uttarakhand">Uttarakhand</option>
+                    <option value="West Bengal">West Bengal</option>
+                  </select>
+                </div>
+                <span class="field-error" id="err-state"></span>
+              </div>
+
+              <!-- PIN Code -->
+              <div class="form-group">
+                <label for="chk-pincode" class="form-label">
+                  PIN CODE <span class="req">*</span>
+                </label>
+                <div class="input-wrapper">
+                  <input type="text" id="chk-pincode" name="pincode" class="form-input" placeholder="6-digit PIN code" maxlength="6" inputmode="numeric" required>
+                </div>
+                <span class="field-error" id="err-pincode"></span>
+              </div>
+
+              <!-- Landmark (Optional) -->
+              <div class="form-group full-width">
+                <label for="chk-landmark" class="form-label">
+                  LANDMARK <span class="opt">(OPTIONAL)</span>
+                </label>
+                <div class="input-wrapper">
+                  <input type="text" id="chk-landmark" name="landmark" class="form-input" placeholder="e.g. Opposite City Hospital, Near Metro Pillar 124">
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Trust highlights -->
+            <div class="delivery-trust-row">
+              <div class="trust-chip">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span>316L Stainless Steel Guarantee</span>
+              </div>
+              <div class="trust-chip">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                <span>Dispatched within 24 Hours</span>
+              </div>
+            </div>
+
+          </div>
+
+        </section>
+
+        <!-- ===================================================================
+             RIGHT COLUMN: ORDER SUMMARY, UPI PAYMENT, SCREENSHOT & SUBMISSION
+             =================================================================== -->
+        <section class="checkout-col checkout-col-order" aria-labelledby="order-summary-heading">
+
+          <!-- ORDER SUMMARY CARD -->
+          <div class="checkout-card order-summary-card">
+            <div class="card-header summary-header">
+              <h2 class="card-title" id="order-summary-heading">ORDER SUMMARY</h2>
+              <span class="summary-count-badge" id="summary-items-count">0 PIECES</span>
+            </div>
+
+            <!-- Items List -->
+            <div class="order-items-scroll" id="order-items-list">
+              <!-- Dynamically populated via checkout.js -->
+            </div>
+
+            <!-- Price Breakdown Table -->
+            <div class="price-breakdown">
+              <div class="price-row">
+                <span class="price-label">Product Subtotal</span>
+                <span class="price-val" id="summary-subtotal">₹0</span>
+              </div>
+              <div class="price-row">
+                <span class="price-label">Pan-India Express Delivery</span>
+                <span class="price-val highlight" id="summary-delivery">₹99</span>
+              </div>
+              <div class="price-row total-row">
+                <div>
+                  <span class="total-label">TOTAL AMOUNT PAYABLE</span>
+                  <span class="total-subtext">All taxes and standard packaging included</span>
+                </div>
+                <span class="total-amount" id="summary-grand-total">₹0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- PAYMENT SECTION CARD -->
+          <div class="checkout-card payment-card" id="payment-section">
+            <div class="card-header">
+              <div class="card-step-badge">2</div>
+              <div>
+                <h2 class="card-title">UPI PAYMENT DETAILS</h2>
+                <p class="card-subtitle">Pay securely using any mobile UPI application or scan the QR code.</p>
+              </div>
+            </div>
+
+            <!-- Mobile UPI Intent Pay Button -->
+            <div class="mobile-upi-intent-wrap">
+              <a href="#" class="btn-upi-mobile" id="btn-upi-intent">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                <span>PAY VIA UPI APP ON MOBILE</span>
+              </a>
+              <p class="upi-intent-hint">Tapping opens Google Pay, PhonePe, Paytm, or CRED on your mobile device.</p>
+            </div>
+
+            <!-- UPI ID & Copy Row -->
+            <div class="upi-id-box">
+              <div class="upi-id-meta">
+                <span class="upi-label">OFFICIAL UPI ID</span>
+                <span class="upi-id-val" id="upi-id-display">renjudinob@okaxis</span>
+                <span class="upi-name-val">Verified Payee: <strong>ACCESSIFY</strong></span>
+              </div>
+              <div class="upi-action-btns">
+                <button type="button" class="btn-copy-chip" id="btn-copy-upi" aria-label="Copy UPI ID">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Copy UPI ID</span>
+                </button>
+                <button type="button" class="btn-copy-chip" id="btn-copy-amt" aria-label="Copy Amount">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 13L2 9z"></path></svg>
+                  <span>Copy Amount</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- UPI QR Code Section -->
+            <div class="upi-qr-card">
+              <div class="qr-label-header">
+                <span>OR SCAN PAYMENT QR CODE</span>
+              </div>
+              <div class="qr-img-frame">
+                <img src="/assets/images/renjudinob-upi-qr.jpg" alt="ACCESSIFY UPI Payment QR Code" id="checkout-qr-img" class="checkout-qr-img">
+              </div>
+              <div class="qr-payable-banner">
+                <span>Exact Order Amount:</span>
+                <strong id="qr-payable-amount">₹0</strong>
+              </div>
+              <p class="qr-instructions">
+                Scan the QR code or pay using the UPI ID. After payment, upload your payment screenshot below to confirm your order.
+              </p>
+            </div>
+          </div>
+
+          <!-- PAYMENT SCREENSHOT UPLOAD CARD -->
+          <div class="checkout-card screenshot-card" id="screenshot-section">
+            <div class="card-header">
+              <div class="card-step-badge">3</div>
+              <div>
+                <h2 class="card-title">PAYMENT SCREENSHOT <span class="req">(REQUIRED)</span></h2>
+                <p class="card-subtitle">Upload your transaction receipt so we can verify and dispatch immediately.</p>
+              </div>
+            </div>
+
+            <!-- Upload Dropzone -->
+            <div class="screenshot-dropzone" id="screenshot-dropzone">
+              <input type="file" id="screenshot-input" accept="image/jpeg,image/png,image/webp" style="display: none;">
+              <div class="dropzone-inner" id="dropzone-click-trigger">
+                <div class="dropzone-icon">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                </div>
+                <div class="dropzone-text-group">
+                  <span class="dropzone-title">Tap to upload your payment screenshot</span>
+                  <span class="dropzone-sub">Supports JPG, PNG, WEBP &bull; Max 10 MB</span>
+                </div>
+                <button type="button" class="btn-browse-file" id="btn-browse-file">CHOOSE IMAGE</button>
+              </div>
+            </div>
+
+            <!-- Selected File Preview Card -->
+            <div class="screenshot-preview-card" id="screenshot-preview-card" style="display: none;">
+              <div class="preview-img-wrap">
+                <img src="" alt="Payment Screenshot Preview" id="screenshot-preview-img">
+              </div>
+              <div class="preview-meta">
+                <span class="preview-file-name" id="screenshot-file-name">screenshot.png</span>
+                <span class="preview-status-pill">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  Proof Attached
+                </span>
+                <div class="preview-actions">
+                  <button type="button" class="btn-preview-action replace" id="btn-replace-screenshot">Change</button>
+                  <button type="button" class="btn-preview-action remove" id="btn-remove-screenshot">Remove</button>
+                </div>
+              </div>
+            </div>
+            <span class="field-error" id="err-screenshot"></span>
+
+            <div class="screenshot-notice-chip">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              <span>Payment proof will be verified directly via WhatsApp before your order is dispatched.</span>
+            </div>
+          </div>
+
+          <!-- SUBMISSION CARD & ACTION BUTTON -->
+          <div class="checkout-submit-card">
+            <button type="submit" class="btn-place-order" id="btn-place-order">
+              <span class="btn-text" id="btn-text">PLACE ORDER & NOTIFY ON WHATSAPP 💎</span>
+              <span class="btn-spinner" id="btn-spinner" style="display: none;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin-icon">
+                  <line x1="12" y1="2" x2="12" y2="6"></line>
+                  <line x1="12" y1="18" x2="12" y2="22"></line>
+                  <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                  <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                  <line x1="2" y1="12" x2="6" y2="12"></line>
+                  <line x1="18" y1="12" x2="22" y2="12"></line>
+                  <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                  <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                </svg>
+                Registering Order...
+              </span>
+            </button>
+            <p class="submit-disclaimer">
+              By placing this order, your order details and screenshot will be securely registered in our system and formatted for instant WhatsApp verification.
+            </p>
+          </div>
+
+        </section>
+
+      </form>
+
+      <!-- ===================================================================
+           3. ORDER SUCCESS & CONFIRMATION STATE (POST-SUBMISSION)
+           =================================================================== -->
+      <section class="checkout-success-view" id="checkout-success-view" style="display: none;" aria-live="polite">
+        <div class="success-card">
+
+          <div class="success-badge-row">
+            <div class="success-icon-bubble">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+            <span class="success-tag">ORDER REGISTERED SUCCESSFULLY 💎</span>
+          </div>
+
+          <h2 class="success-headline">Thank You for Your Order!</h2>
+          <p class="success-subheadline">
+            Order Reference: <strong class="order-id-highlight" id="success-order-id">ACC-ORD-XXXXXX</strong>
+          </p>
+
+          <!-- WhatsApp Primary Action Box -->
+          <div class="whatsapp-prompt-box">
+            <div class="wa-prompt-header">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="#25D366">
+                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.966.527 1.93.811 2.796.811 3.181 0 5.767-2.587 5.768-5.766.001-3.181-2.585-5.798-5.768-5.798zm3.385 8.163c-.145.408-.847.781-1.183.829-.336.048-.775.068-2.223-.529-1.854-.764-3.04-2.653-3.132-2.775-.093-.122-.749-.997-.749-1.902 0-.904.472-1.349.64-1.533.168-.184.368-.23.491-.23.123 0 .245.001.353.007.113.005.263-.043.412.316.153.368.522 1.272.568 1.365.046.092.077.2.015.323-.061.123-.092.2-.184.307-.092.107-.194.24-.277.323-.092.092-.189.193-.081.378.107.185.477.787 1.025 1.275.707.63 1.303.825 1.488.917.184.092.292.077.4-.046.108-.123.461-.537.584-.722.123-.184.246-.153.414-.092.169.061 1.074.507 1.258.6.184.092.307.138.353.215.046.077.046.446-.099.854z" />
+              </svg>
+              <span>FINAL STEP: CONFIRM ON WHATSAPP</span>
+            </div>
+            <p class="wa-prompt-desc">
+              To complete verification and dispatch, send your order summary and payment screenshot to our direct WhatsApp concierge (<strong>+91 7012400815</strong>).
+            </p>
+            <div class="wa-action-buttons">
+              <a href="#" class="btn-confirm-wa" id="btn-success-wa" target="_blank" rel="noopener noreferrer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.966.527 1.93.811 2.796.811 3.181 0 5.767-2.587 5.768-5.766.001-3.181-2.585-5.798-5.768-5.798zm3.385 8.163c-.145.408-.847.781-1.183.829-.336.048-.775.068-2.223-.529-1.854-.764-3.04-2.653-3.132-2.775-.093-.122-.749-.997-.749-1.902 0-.904.472-1.349.64-1.533.168-.184.368-.23.491-.23.123 0 .245.001.353.007.113.005.263-.043.412.316.153.368.522 1.272.568 1.365.046.092.077.2.015.323-.061.123-.092.2-.184.307-.092.107-.194.24-.277.323-.092.092-.189.193-.081.378.107.185.477.787 1.025 1.275.707.63 1.303.825 1.488.917.184.092.292.077.4-.046.108-.123.461-.537.584-.722.123-.184.246-.153.414-.092.169.061 1.074.507 1.258.6.184.092.307.138.353.215.046.077.046.446-.099.854z" />
+                </svg>
+                <span>OPEN WHATSAPP CHAT WITH ORDER</span>
+              </a>
+              <button type="button" class="btn-download-screenshot" id="btn-success-download-ss">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>DOWNLOAD PAYMENT SCREENSHOT</span>
+              </button>
+            </div>
+            <div class="wa-attach-instruction">
+              <span class="pin-icon">📌</span>
+              <span><strong>Instruction:</strong> Normal WhatsApp chat links cannot automatically attach local files. Please tap the attachment button in WhatsApp to attach your payment screenshot before pressing Send!</span>
+            </div>
+          </div>
+
+          <!-- Order Summary Breakdown -->
+          <div class="success-details-grid">
+
+            <!-- Customer & Shipping Details -->
+            <div class="success-detail-box">
+              <h3 class="detail-box-title">DELIVERY DETAILS</h3>
+              <div class="detail-content">
+                <p><strong>Name:</strong> <span id="success-cust-name">—</span></p>
+                <p><strong>Phone:</strong> <span id="success-cust-phone">—</span></p>
+                <p><strong>Address:</strong> <span id="success-cust-address">—</span></p>
+              </div>
+            </div>
+
+            <!-- Payment & Proof Details -->
+            <div class="success-detail-box">
+              <h3 class="detail-box-title">PAYMENT SUMMARY</h3>
+              <div class="detail-content">
+                <p><strong>Subtotal:</strong> <span id="success-subtotal">₹0</span></p>
+                <p><strong>Pan-India Delivery:</strong> <span id="success-delivery">₹99</span></p>
+                <p><strong>Total Amount:</strong> <strong id="success-total" class="success-total-val">₹0</strong></p>
+                <p><strong>Payment Status:</strong> <span class="badge-status-submitted">Screenshot Submitted (Verifying)</span></p>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Products Ordered List -->
+          <div class="success-products-wrap">
+            <h3 class="detail-box-title">ORDERED PRODUCTS</h3>
+            <div class="success-products-list" id="success-products-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Back to Store Action -->
+          <div class="success-footer-actions">
+            <a href="/" class="btn-return-home">← RETURN TO ACCESSIFY STORE</a>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Toast notification container -->
+  <div class="checkout-toast-container" id="checkout-toast-container"></div>
+
+  <!-- Checkout Application Engine -->
+  <script src="/js/checkout.js?v=1.0"></script>
+</body>
+
+</html>

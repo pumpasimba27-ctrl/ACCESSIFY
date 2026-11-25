@@ -1393,6 +1393,7 @@ export async function createPublicOrder(data) {
   const house = String(data.house || '').trim();
   const street = String(data.street || '').trim();
   const city = String(data.city || '').trim();
+  const district = String(data.district || '').trim();
   const state = String(data.state || '').trim();
   const pincode = String(data.pincode || '').trim();
   const landmark = String(data.landmark || '').trim();
@@ -1461,6 +1462,7 @@ export async function createPublicOrder(data) {
     house,
     street,
     city,
+    district,
     state ? `${state} - ${pincode}` : pincode,
     landmark ? `(Landmark: ${landmark})` : ''
   ].filter(Boolean).join(', ');

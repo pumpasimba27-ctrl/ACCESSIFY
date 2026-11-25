@@ -1136,6 +1136,13 @@ const sendStorefrontNoCache = (res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 };
 
+app.get('/checkout', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.sendFile(path.join(PUBLIC_DIR, 'checkout.html'));
+});
+
 app.get('/accessories', (req, res) => {
   sendStorefrontNoCache(res);
 });
