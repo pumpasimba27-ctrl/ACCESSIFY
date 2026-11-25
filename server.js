@@ -1022,7 +1022,7 @@ app.put('/api/admin/settings', requireAdmin, async (req, res) => {
 app.get('/api/admin/best-selling', requireAdmin, async (req, res) => {
   try {
     const result = await getBestSellingProducts();
-    const all = await getProducts({ includeHidden: false, limit: 1000 });
+    const all = await getProducts({ section: 'accessories', includeHidden: false, limit: 1000 });
     res.json({
       success: true,
       mode: result.mode,

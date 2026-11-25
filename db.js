@@ -1783,7 +1783,7 @@ export async function getBestSellingProducts() {
   if (mode === 'manual' && Array.isArray(manualIds) && manualIds.length > 0) {
     const placeholders = manualIds.map(() => '?').join(',');
     const rows = await queryAll(
-      `SELECT * FROM products WHERE id IN (${placeholders}) AND status NOT IN ('hidden', 'inactive')`,
+      `SELECT * FROM products WHERE id IN (${placeholders}) AND section = 'accessories' AND status NOT IN ('hidden', 'inactive')`,
       manualIds
     );
     const map = new Map();
@@ -1803,9 +1803,9 @@ export async function getBestSellingProducts() {
     }
   }
 
-  // Automatic Mode: 10 latest products uploaded (sorted newest first)
+  // Automatic Mode: 10 latest accessory products uploaded (sorted newest first)
   const rows = await queryAll(
-    `SELECT * FROM products WHERE status NOT IN ('hidden', 'inactive') ORDER BY created_at DESC, id DESC LIMIT 10`
+    `SELECT * FROM products WHERE section = 'accessories' AND status NOT IN ('hidden', 'inactive') ORDER BY created_at DESC, id DESC LIMIT 10`
   );
   return {
     mode: 'auto',

@@ -1568,7 +1568,7 @@
 
     if (modeDesc) {
       modeDesc.textContent = isAuto
-        ? 'Showing the 10 latest products uploaded to the website automatically (sorted newest first).'
+        ? 'Showing the 10 latest accessory products uploaded to the website automatically (sorted newest first).'
         : 'Displaying your custom selected products in the exact order arranged below.';
     }
 
