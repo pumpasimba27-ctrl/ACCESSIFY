@@ -475,10 +475,7 @@ Please provide more details about availability and ordering.`;
       if (res.status === 304 && cached && cached.data) {
         allProducts = cached.data;
         currentDbVersion = cached.version;
-        // If skeletons are still showing, replace with cached products
-        if (el.productsGrid && el.productsGrid.querySelector('.skeleton-card')) {
-          renderProductsGrid(allProducts);
-        }
+        renderProductsGrid(allProducts);
         return;
       }
 
@@ -588,21 +585,32 @@ Please provide more details about availability and ordering.`;
     });
   }
 
+  function formatCategoryTitle(str) {
+    if (!str) return '';
+    const clean = String(str).trim();
+    // Preserve Title Case matching reference design
+    if (clean === clean.toUpperCase() && clean.length > 3) {
+      return clean.toLowerCase().replace(/(^|\s|-|\/)([a-z])/g, (_, sep, letter) => sep + letter.toUpperCase());
+    }
+    return clean;
+  }
+
   function renderCategoryPills() {
     const container = el.homepageCategoryPills || el.categoryPills || document.getElementById('homepage-category-pills');
     if (!container) return;
 
     let html = `
       <button type="button" class="category-nav-pill filter-pill ${currentCategory === 'all' ? 'active' : ''}" data-cat="all" role="tab" aria-selected="${currentCategory === 'all' ? 'true' : 'false'}">
-        ALL
+        All
       </button>
     `;
 
     allCategories.forEach(cat => {
       const isActive = currentCategory === cat.id;
+      const displayName = formatCategoryTitle(cat.name || cat.id);
       html += `
         <button type="button" class="category-nav-pill filter-pill ${isActive ? 'active' : ''}" data-cat="${escapeHtml(cat.id)}" role="tab" aria-selected="${isActive ? 'true' : 'false'}">
-          ${escapeHtml((cat.name || '').toUpperCase())}
+          ${escapeHtml(displayName)}
         </button>
       `;
     });

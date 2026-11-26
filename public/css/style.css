@@ -3044,16 +3044,17 @@ body.show-gateway .section-gateway,
     border-color: rgba(255, 255, 255, 0.28);
     box-shadow: 0 16px 45px rgba(0, 0, 0, 0.98), 0 0 25px rgba(255, 255, 255, 0.15);
   }
+}
 
   /* ==========================================================================
-     HOMEPAGE HORIZONTAL CATEGORY NAVIGATION BAR (CLEAN WHITE PILLS)
+     HOMEPAGE HORIZONTAL CATEGORY NAVIGATION BAR (EXACT REFERENCE PILL DESIGN)
      ========================================================================== */
   .homepage-category-bar {
     position: relative;
     width: 100%;
     background: #000000;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 0.85rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1.15rem 0;
     margin: 0;
     z-index: 10;
   }
@@ -3066,8 +3067,10 @@ body.show-gateway .section-gateway,
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    overscroll-behavior-x: contain;
   }
 
   .category-nav-scroll-wrap::-webkit-scrollbar {
@@ -3079,52 +3082,52 @@ body.show-gateway .section-gateway,
   .category-pills-row {
     display: flex;
     align-items: center;
-    gap: 0.625rem;
+    flex-wrap: nowrap;
+    gap: 0.85rem;
     width: max-content;
-    padding: 2px 1.5rem 2px 0;
+    padding: 2px 2.5rem 2px 0;
   }
 
   .category-nav-pill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.55rem 1.25rem;
-    background-color: #ffffff;
-    color: #050505;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 999px;
-    font-family: var(--font-sans, 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif);
-    font-size: 0.8125rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    flex-shrink: 0;
     white-space: nowrap;
+    height: 44px;
+    padding: 0 1.5rem;
+    background-color: #ECEDE7;
+    color: #000000;
+    border: none;
+    border-radius: 9999px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    line-height: 1;
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    flex-shrink: 0;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+    box-shadow: none;
   }
 
   .category-nav-pill:hover {
-    background-color: #f4f4f5;
+    background-color: #F5F6F2;
     color: #000000;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(255, 255, 255, 0.15);
   }
 
   .category-nav-pill:active {
-    transform: scale(0.96);
+    transform: scale(0.97);
   }
 
   .category-nav-pill.active {
-    background-color: #ffffff;
+    background-color: #FFFFFF;
     color: #000000;
-    border-color: #ffffff;
-    font-weight: 800;
-    box-shadow: 0 0 0 2px #000000, 0 0 0 3px #ffffff, 0 4px 12px rgba(255, 255, 255, 0.25);
+    font-weight: 600;
+    box-shadow: 0 0 0 2px #000000, 0 0 0 3.5px #ECEDE7;
   }
 
   /* Scroll margin for catalog target */
@@ -3134,7 +3137,7 @@ body.show-gateway .section-gateway,
 
   @media (max-width: 768px) {
     .homepage-category-bar {
-      padding: 0.65rem 0;
+      padding: 0.85rem 0;
     }
 
     .category-nav-scroll-wrap {
@@ -3142,28 +3145,38 @@ body.show-gateway .section-gateway,
     }
 
     .category-pills-row {
-      gap: 0.5rem;
-      padding-right: 2rem;
+      gap: 0.75rem;
+      padding-right: 2.5rem;
     }
 
     .category-nav-pill {
-      padding: 0.5rem 1rem;
-      font-size: 0.74rem;
-      letter-spacing: 0.03em;
+      height: 38px;
+      padding: 0 1.25rem;
+      font-size: 0.875rem;
+      letter-spacing: -0.01em;
     }
   }
 
   @media (max-width: 480px) {
     .homepage-category-bar {
-      padding: 0.55rem 0;
+      padding: 0.75rem 0;
+    }
+
+    .category-nav-scroll-wrap {
+      padding: 0 1rem;
+    }
+
+    .category-pills-row {
+      gap: 0.75rem;
+      padding-right: 2.5rem;
     }
 
     .category-nav-pill {
-      padding: 0.45rem 0.875rem;
-      font-size: 0.71rem;
+      height: 36px;
+      padding: 0 1.15rem;
+      font-size: 0.8125rem;
     }
   }
-}
 
 /* =======================================================================
    16. CART DRAWER, CHECKOUT SYSTEM & UPI PAYMENT STYLES
