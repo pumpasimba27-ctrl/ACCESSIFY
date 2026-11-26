@@ -280,295 +280,85 @@
   </section>
 
   <!-- =======================================================================
-       6. SHOP BY CATEGORY SECTION (DESKTOP ORIGINAL DESIGN)
+       6. HOMEPAGE HORIZONTAL CATEGORY NAVIGATION BAR (TEXT-ONLY WHITE PILLS)
        ======================================================================= -->
-  <section class="shop-by-category-section desktop-only" id="shop-by-category">
+  <nav class="homepage-category-bar" id="homepage-category-nav" aria-label="Category Navigation">
+    <div class="category-nav-scroll-wrap" id="category-nav-scroll">
+      <div class="category-pills-row" id="homepage-category-pills" role="tablist">
+        <!-- Dynamically rendered via app.js -->
+        <button type="button" class="category-nav-pill active" data-cat="all" role="tab"
+          aria-selected="true">ALL</button>
+        <button type="button" class="category-nav-pill" data-cat="chrome-hearts" role="tab" aria-selected="false">CHROME
+          HEARTS</button>
+        <button type="button" class="category-nav-pill" data-cat="chains" role="tab" aria-selected="false">CHAINS &amp;
+          NECKLACES</button>
+        <button type="button" class="category-nav-pill" data-cat="combos" role="tab" aria-selected="false">COMBO
+          SETS</button>
+        <button type="button" class="category-nav-pill" data-cat="bracelets" role="tab"
+          aria-selected="false">BRACELETS</button>
+        <button type="button" class="category-nav-pill" data-cat="rings" role="tab" aria-selected="false">RINGS</button>
+        <button type="button" class="category-nav-pill" data-cat="earrings" role="tab"
+          aria-selected="false">EARRINGS</button>
+        <button type="button" class="category-nav-pill" data-cat="wallets" role="tab" aria-selected="false">WALLETS
+          &amp; UTILITY</button>
+        <button type="button" class="category-nav-pill" data-cat="sleek-chains" role="tab" aria-selected="false">SLEEK
+          CHAINS</button>
+        <button type="button" class="category-nav-pill" data-cat="y2k-gothic-necklaces" role="tab"
+          aria-selected="false">Y2K GOTHIC</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- =======================================================================
+       7. BEST SELLERS (HORIZONTAL SWIPEABLE ROW)
+       ======================================================================= -->
+  <section class="best-selling-section" id="best-selling-section" aria-label="Best Sellers">
     <div class="container">
-      <!-- Section Header Row -->
-      <div class="section-header-row">
-        <h2 class="section-main-heading">SHOP BY CATEGORY</h2>
-        <div style="display: flex; align-items: center; gap: 0.65rem;">
-          <a href="#catalog" class="section-view-all" id="desktop-view-all-cats">
-            <span>View all</span>
-            <span style="font-size: 1rem;">→</span>
-          </a>
-          <button type="button" class="carousel-arrow-btn" id="desktop-cat-prev" aria-label="Scroll categories left"
-            title="Scroll Left">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
-          <button type="button" class="carousel-arrow-btn" id="desktop-cat-next" aria-label="Scroll categories right"
-            title="Scroll Right">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </button>
-        </div>
+      <div class="best-selling-header-row">
+        <h3 class="best-selling-heading">BEST SELLERS</h3>
       </div>
 
-      <!-- 8 Square Category Cards Grid -->
-      <div class="category-card-grid" id="desktop-category-card-grid">
-        <a href="#catalog" class="category-square-card" data-cat="chains">
-          <div class="category-img-box">
-            <img src="/assets/images/category-chains.jpg" alt="Chains & Necklaces" loading="lazy">
-          </div>
-          <span class="category-label">CHAINS</span>
-        </a>
-        <a href="#catalog" class="category-square-card" data-cat="rings">
-          <div class="category-img-box">
-            <img src="/assets/images/category-rings.jpg" alt="Rings" loading="lazy">
-          </div>
-          <span class="category-label">RINGS</span>
-        </a>
-        <a href="#catalog" class="category-square-card" data-cat="earrings">
-          <div class="category-img-box">
-            <img src="/assets/images/category-earrings.jpg" alt="Earrings" loading="lazy">
-          </div>
-          <span class="category-label">EARRINGS</span>
-        </a>
-        <a href="#catalog" class="category-square-card" data-cat="bracelets">
-          <div class="category-img-box">
-            <img src="/assets/images/category-bracelets.jpg" alt="Bracelets" loading="lazy">
-          </div>
-          <span class="category-label">BRACELET</span>
-        </a>
-        <a href="#catalog" class="category-square-card" data-cat="y2k-gothic-necklaces">
-          <div class="category-img-box">
-            <img src="/assets/images/category-gothic.jpg" alt="Y2K Gothic Necklaces" loading="lazy">
-          </div>
-          <span class="category-label">Y2K GOTHIC NECKLACES</span>
-        </a>
-        <a href="#catalog" class="category-square-card" data-cat="chrome-hearts">
-          <div class="category-img-box">
-            <img src="/assets/images/category-chrome-hearts.jpg" alt="Chrome Hearts" loading="lazy">
-          </div>
-          <span class="category-label">CHROME HEARTS</span>
-        </a>
-        <a href="#catalog" class="category-square-card" data-cat="sleek-chains">
-          <div class="category-img-box">
-            <img src="/assets/images/category-sleek-chains.jpg" alt="Sleek Chains" loading="lazy">
-          </div>
-          <span class="category-label">SLEEK CHAINS</span>
-        </a>
-        <a href="#catalog" class="category-square-card" data-cat="combos">
-          <div class="category-img-box">
-            <img src="/assets/images/category-combos.jpg" alt="Limited Edition Combos" loading="lazy">
-          </div>
-          <span class="category-label">LIMITED EDITION COMBOS</span>
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- =======================================================================
-       6b. INFINITE SCROLLING TICKER MARQUEE
-       ======================================================================= -->
-  <section class="marquee-section" aria-label="Brand Highlights">
-    <div class="marquee-content">
-      <div class="marquee-item">
-        <span>ACCESSIFY ARCHIVE</span>
-        <span class="star">★</span>
-        <span>100% 316L SURGICAL STAINLESS STEEL</span>
-        <span class="star">★</span>
-        <span>WATERPROOF &bull; TARNISH-FREE</span>
-        <span class="star">★</span>
-        <span>ORDER ON WHATSAPP: +91 7012400815</span>
-        <span class="star">★</span>
-        <span>PAN-INDIA EXPRESS DELIVERY</span>
-        <span class="star">★</span>
-        <span>NO GREEN DISCOLORATION</span>
-        <span class="star">★</span>
-        <span>HYPOALLERGENIC</span>
-        <span class="star">★</span>
-      </div>
-      <!-- Marquee clone -->
-      <div class="marquee-item" aria-hidden="true">
-        <span>ACCESSIFY ARCHIVE</span>
-        <span class="star">★</span>
-        <span>100% 316L SURGICAL STAINLESS STEEL</span>
-        <span class="star">★</span>
-        <span>WATERPROOF &bull; TARNISH-FREE</span>
-        <span class="star">★</span>
-        <span>ORDER ON WHATSAPP: +91 7012400815</span>
-        <span class="star">★</span>
-        <span>PAN-INDIA EXPRESS DELIVERY</span>
-        <span class="star">★</span>
-        <span>NO GREEN DISCOLORATION</span>
-        <span class="star">★</span>
-        <span>HYPOALLERGENIC</span>
-        <span class="star">★</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- =======================================================================
-       7. CURATED CATEGORY SHOWCASE (MOBILE ONLY)
-       ======================================================================= -->
-  <section class="categories-section mobile-only" id="categories">
-    <div class="container">
-      <div class="categories-header">
-        <div>
-          <div class="section-label" id="categories-section-label">CURATED CATEGORIES</div>
-          <h2 class="section-title" id="categories-section-title">THE ACCESSIFY VAULT</h2>
-        </div>
-        <div class="categories-carousel-nav" aria-label="Category Navigation">
-          <button type="button" class="carousel-arrow-btn" id="cat-scroll-prev" aria-label="Previous categories"
-            title="Scroll Left">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
-          <button type="button" class="carousel-arrow-btn" id="cat-scroll-next" aria-label="Next categories"
-            title="Scroll Right">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <div class="categories-scroll-wrapper">
-        <div class="categories-grid" id="categories-vault-grid">
-          <!-- Category: Chrome Hearts -->
-          <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('chrome-hearts')">
-            <img src="/assets/images/category-chrome-hearts.jpg?v=3" alt="Chrome Hearts" class="category-card-img"
-              loading="lazy">
-            <div class="category-card-gradient"></div>
-            <div class="category-card-info">
-              <div class="category-card-count" data-vault-cat="chrome-hearts">42 PIECES</div>
-              <div class="category-card-name">
-                <span>CHROME HEARTS</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </div>
+      <!-- Horizontal Swipeable Products Row -->
+      <div class="best-selling-slider-wrap" id="best-selling-slider-wrap">
+        <div class="best-selling-slider-track" id="best-selling-track" role="region" aria-label="Best sellers carousel">
+          <!-- Initial fast skeleton placeholders for instant perceived speed -->
+          <div class="product-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-figure skeleton-shimmer"></div>
+            <div class="skeleton-info">
+              <div class="skeleton-bar skeleton-bar-sm skeleton-shimmer"></div>
+              <div class="skeleton-bar skeleton-bar-md skeleton-shimmer"></div>
+              <div class="skeleton-bar skeleton-bar-price skeleton-shimmer"></div>
             </div>
-          </a>
-
-          <!-- Category: Chains & Necklaces -->
-          <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('chains')">
-            <img src="/assets/images/category-chains.jpg?v=3" alt="Chains & Necklaces" class="category-card-img"
-              loading="lazy">
-            <div class="category-card-gradient"></div>
-            <div class="category-card-info">
-              <div class="category-card-count" data-vault-cat="chains">108 PIECES</div>
-              <div class="category-card-name">
-                <span>CHAINS & NECKLACES</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </div>
+          </div>
+          <div class="product-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-figure skeleton-shimmer"></div>
+            <div class="skeleton-info">
+              <div class="skeleton-bar skeleton-bar-sm skeleton-shimmer"></div>
+              <div class="skeleton-bar skeleton-bar-md skeleton-shimmer"></div>
+              <div class="skeleton-bar skeleton-bar-price skeleton-shimmer"></div>
             </div>
-          </a>
-
-          <!-- Category: Combo Sets -->
-          <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('combos')">
-            <img src="/assets/images/category-combos.jpg?v=7" alt="Combo Sets" class="category-card-img" loading="lazy">
-            <div class="category-card-gradient"></div>
-            <div class="category-card-info">
-              <div class="category-card-count" data-vault-cat="combos">20 PIECES</div>
-              <div class="category-card-name">
-                <span>COMBO SETS</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </div>
+          </div>
+          <div class="product-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-figure skeleton-shimmer"></div>
+            <div class="skeleton-info">
+              <div class="skeleton-bar skeleton-bar-sm skeleton-shimmer"></div>
+              <div class="skeleton-bar skeleton-bar-md skeleton-shimmer"></div>
+              <div class="skeleton-bar skeleton-bar-price skeleton-shimmer"></div>
             </div>
-          </a>
-
-          <!-- Category: Bracelets -->
-          <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('bracelets')">
-            <img src="/assets/images/category-bracelets.jpg?v=4" alt="Bracelets" class="category-card-img"
-              loading="lazy">
-            <div class="category-card-gradient"></div>
-            <div class="category-card-info">
-              <div class="category-card-count" data-vault-cat="bracelets">20 PIECES</div>
-              <div class="category-card-name">
-                <span>BRACELETS</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </div>
+          </div>
+          <div class="product-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-figure skeleton-shimmer"></div>
+            <div class="skeleton-info">
+              <div class="skeleton-bar skeleton-bar-sm skeleton-shimmer"></div>
+              <div class="skeleton-bar skeleton-bar-md skeleton-shimmer"></div>
+              <div class="skeleton-bar skeleton-bar-price skeleton-shimmer"></div>
             </div>
-          </a>
-
-          <!-- Category: Rings -->
-          <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('rings')">
-            <img src="/assets/images/category-rings.jpg?v=3" alt="Rings" class="category-card-img" loading="lazy">
-            <div class="category-card-gradient"></div>
-            <div class="category-card-info">
-              <div class="category-card-count" data-vault-cat="rings">30 PIECES</div>
-              <div class="category-card-name">
-                <span>RINGS</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </div>
-            </div>
-          </a>
-
-          <!-- Category: Earrings -->
-          <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('earrings')">
-            <img src="/assets/images/category-earrings.jpg?v=4" alt="Earrings" class="category-card-img" loading="lazy">
-            <div class="category-card-gradient"></div>
-            <div class="category-card-info">
-              <div class="category-card-count" data-vault-cat="earrings">2 PIECES</div>
-              <div class="category-card-name">
-                <span>EARRINGS</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </div>
-            </div>
-          </a>
-
-          <!-- Category: Y2K Gothic Necklaces -->
-          <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('y2k-gothic-necklaces')">
-            <img src="/assets/images/category-y2k-gothic.jpg?v=3" alt="Y2K Gothic Necklaces" class="category-card-img"
-              loading="lazy">
-            <div class="category-card-gradient"></div>
-            <div class="category-card-info">
-              <div class="category-card-count" data-vault-cat="y2k-gothic-necklaces">76 PIECES</div>
-              <div class="category-card-name">
-                <span>Y2K GOTHIC</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </div>
-            </div>
-          </a>
-
-          <!-- Category: Sleek Chains -->
-          <a href="#catalog" class="category-card" onclick="window.setStoreCategory?.('sleek-chains')">
-            <img src="/assets/images/sleek-chains.jpg?v=2" alt="Sleek Chains" class="category-card-img" loading="lazy">
-            <div class="category-card-gradient"></div>
-            <div class="category-card-info">
-              <div class="category-card-count" data-vault-cat="sleek-chains">34 PIECES</div>
-              <div class="category-card-name">
-                <span>SLEEK CHAINS</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
-                </svg>
-              </div>
-            </div>
-          </a>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- =======================================================================
-       8. MAIN CATALOGUE SECTION (200+ PRODUCTS)
-       ======================================================================= -->
   <section class="catalog-section" id="catalog">
     <div class="container">
       <div class="catalog-header">
@@ -586,62 +376,9 @@
         </button>
       </div>
 
-      <!-- =======================================================================
-           BEST SELLERS (HORIZONTAL SWIPEABLE ROW)
-           ======================================================================= -->
-      <section class="best-selling-section" id="best-selling-section" aria-label="Best Sellers">
-        <div class="best-selling-header-row">
-          <h3 class="best-selling-heading">BEST SELLERS</h3>
-        </div>
-
-        <!-- Horizontal Swipeable Products Row -->
-        <div class="best-selling-slider-wrap" id="best-selling-slider-wrap">
-          <div class="best-selling-slider-track" id="best-selling-track" role="region"
-            aria-label="Best sellers carousel">
-            <!-- Initial fast skeleton placeholders for instant perceived speed -->
-            <div class="product-card skeleton-card" aria-hidden="true">
-              <div class="skeleton-figure skeleton-shimmer"></div>
-              <div class="skeleton-info">
-                <div class="skeleton-bar skeleton-bar-sm skeleton-shimmer"></div>
-                <div class="skeleton-bar skeleton-bar-md skeleton-shimmer"></div>
-                <div class="skeleton-bar skeleton-bar-price skeleton-shimmer"></div>
-              </div>
-            </div>
-            <div class="product-card skeleton-card" aria-hidden="true">
-              <div class="skeleton-figure skeleton-shimmer"></div>
-              <div class="skeleton-info">
-                <div class="skeleton-bar skeleton-bar-sm skeleton-shimmer"></div>
-                <div class="skeleton-bar skeleton-bar-md skeleton-shimmer"></div>
-                <div class="skeleton-bar skeleton-bar-price skeleton-shimmer"></div>
-              </div>
-            </div>
-            <div class="product-card skeleton-card" aria-hidden="true">
-              <div class="skeleton-figure skeleton-shimmer"></div>
-              <div class="skeleton-info">
-                <div class="skeleton-bar skeleton-bar-sm skeleton-shimmer"></div>
-                <div class="skeleton-bar skeleton-bar-md skeleton-shimmer"></div>
-                <div class="skeleton-bar skeleton-bar-price skeleton-shimmer"></div>
-              </div>
-            </div>
-            <div class="product-card skeleton-card" aria-hidden="true">
-              <div class="skeleton-figure skeleton-shimmer"></div>
-              <div class="skeleton-info">
-                <div class="skeleton-bar skeleton-bar-sm skeleton-shimmer"></div>
-                <div class="skeleton-bar skeleton-bar-md skeleton-shimmer"></div>
-                <div class="skeleton-bar skeleton-bar-price skeleton-shimmer"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- Filter Controls & Sort -->
       <div class="catalog-controls">
-        <div class="filter-pills" id="category-pills">
-          <!-- Rendered dynamically via app.js -->
-        </div>
-
-        <div class="catalog-meta">
+        <div class="catalog-meta" style="margin-left: auto;">
           <span class="catalog-count" id="catalog-count">LOADING PIECES...</span>
           <select id="sort-select" class="sort-select" aria-label="Sort Catalog">
             <option value="default">FEATURED DROPS</option>
@@ -722,6 +459,48 @@
       </div>
     </div>
   </section>
+
+  <!-- =======================================================================
+       9. BRAND HIGHLIGHTS MARQUEE
+       ======================================================================= -->
+  <section class="marquee-section" aria-label="Brand Highlights">
+    <div class="marquee-content">
+      <div class="marquee-item">
+        <span>ACCESSIFY ARCHIVE</span>
+        <span class="star">★</span>
+        <span>100% 316L SURGICAL STAINLESS STEEL</span>
+        <span class="star">★</span>
+        <span>WATERPROOF &bull; TARNISH-FREE</span>
+        <span class="star">★</span>
+        <span>ORDER ON WHATSAPP: +91 7012400815</span>
+        <span class="star">★</span>
+        <span>PAN-INDIA EXPRESS DELIVERY</span>
+        <span class="star">★</span>
+        <span>NO GREEN DISCOLORATION</span>
+        <span class="star">★</span>
+        <span>HYPOALLERGENIC</span>
+        <span class="star">★</span>
+      </div>
+      <!-- Marquee clone -->
+      <div class="marquee-item" aria-hidden="true">
+        <span>ACCESSIFY ARCHIVE</span>
+        <span class="star">★</span>
+        <span>100% 316L SURGICAL STAINLESS STEEL</span>
+        <span class="star">★</span>
+        <span>WATERPROOF &bull; TARNISH-FREE</span>
+        <span class="star">★</span>
+        <span>ORDER ON WHATSAPP: +91 7012400815</span>
+        <span class="star">★</span>
+        <span>PAN-INDIA EXPRESS DELIVERY</span>
+        <span class="star">★</span>
+        <span>NO GREEN DISCOLORATION</span>
+        <span class="star">★</span>
+        <span>HYPOALLERGENIC</span>
+        <span class="star">★</span>
+      </div>
+    </div>
+  </section>
+
 
   <!-- =======================================================================
        9. EDITORIAL / STATEMENT BANNER

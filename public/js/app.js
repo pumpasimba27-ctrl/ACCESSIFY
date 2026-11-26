@@ -113,7 +113,9 @@
     // Products Grid & Filters
     productsGrid: document.getElementById('products-grid'),
     catalogCount: document.getElementById('catalog-count'),
-    categoryPills: document.getElementById('category-pills'),
+    categoryPills: document.getElementById('homepage-category-pills') || document.getElementById('category-pills'),
+    homepageCategoryNav: document.getElementById('homepage-category-nav'),
+    homepageCategoryPills: document.getElementById('homepage-category-pills'),
     sortSelect: document.getElementById('sort-select'),
     heroExploreBtn: document.getElementById('hero-explore-btn'),
     heroWhatsappBtn: document.getElementById('hero-whatsapp-btn'),
@@ -569,35 +571,62 @@ Please provide more details about availability and ordering.`;
   // -------------------------------------------------------------
   // CATEGORY PILLS & CONTROLS
   // -------------------------------------------------------------
-  function renderCategoryPills() {
-    if (!el.categoryPills) return;
+  function updateCategoryPillsActiveState(catId) {
+    const container = el.homepageCategoryPills || el.categoryPills || document.getElementById('homepage-category-pills');
+    if (!container) return;
+    const targetCat = catId || 'all';
+    container.querySelectorAll('.category-nav-pill, .filter-pill').forEach(btn => {
+      const btnCat = btn.getAttribute('data-cat') || 'all';
+      const isMatch = btnCat === targetCat;
+      btn.classList.toggle('active', isMatch);
+      btn.setAttribute('aria-selected', isMatch ? 'true' : 'false');
+      if (isMatch) {
+        try {
+          btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        } catch (_) { }
+      }
+    });
+  }
 
-    const totalCount = allCategories.reduce((acc, c) => acc + (c.count || 0), 0);
+  function renderCategoryPills() {
+    const container = el.homepageCategoryPills || el.categoryPills || document.getElementById('homepage-category-pills');
+    if (!container) return;
 
     let html = `
-      <button class="filter-pill ${currentCategory === 'all' ? 'active' : ''}" data-cat="all">
-        ALL (${totalCount})
+      <button type="button" class="category-nav-pill filter-pill ${currentCategory === 'all' ? 'active' : ''}" data-cat="all" role="tab" aria-selected="${currentCategory === 'all' ? 'true' : 'false'}">
+        ALL
       </button>
     `;
 
     allCategories.forEach(cat => {
-      const isActive = currentCategory === cat.id ? 'active' : '';
+      const isActive = currentCategory === cat.id;
       html += `
-        <button class="filter-pill ${isActive}" data-cat="${escapeHtml(cat.id)}">
-          ${escapeHtml(cat.name)} (${cat.count || 0})
+        <button type="button" class="category-nav-pill filter-pill ${isActive ? 'active' : ''}" data-cat="${escapeHtml(cat.id)}" role="tab" aria-selected="${isActive ? 'true' : 'false'}">
+          ${escapeHtml((cat.name || '').toUpperCase())}
         </button>
       `;
     });
 
-    el.categoryPills.innerHTML = html;
+    container.innerHTML = html;
 
     // Attach click events
-    el.categoryPills.querySelectorAll('.filter-pill').forEach(btn => {
+    container.querySelectorAll('.category-nav-pill, .filter-pill').forEach(btn => {
       btn.addEventListener('click', () => {
-        const cat = btn.getAttribute('data-cat');
+        const cat = btn.getAttribute('data-cat') || 'all';
         setCategory(cat);
+        try {
+          btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        } catch (_) { }
       });
     });
+
+    // Auto center current active pill
+    try {
+      const activeBtn = container.querySelector('.category-nav-pill.active, .filter-pill.active');
+      if (activeBtn && typeof activeBtn.scrollIntoView === 'function') {
+        activeBtn.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+      }
+    } catch (_) { }
   }
 
   function renderMobileCategories() {
@@ -642,6 +671,7 @@ Please provide more details about availability and ordering.`;
   function setCategory(catId) {
     currentCategory = catId;
     renderHeaderNav();
+    updateCategoryPillsActiveState(catId);
     renderCategoryPills();
     renderMobileCategories();
     updateDesktopCategoryNav(catId);
@@ -1842,6 +1872,64 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
     }
   }
 
+  function initCategoryNavScroll() {
+    const wrap = document.getElementById('category-nav-scroll');
+    if (!wrap) return;
+
+    let isDown = false;
+    let startX = 0;
+    let scrollLeftPos = 0;
+    let dragged = 0;
+
+    wrap.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      isDown = true;
+      startX = e.pageX - wrap.offsetLeft;
+      scrollLeftPos = wrap.scrollLeft;
+      dragged = 0;
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDown) {
+        isDown = false;
+        wrap.classList.remove('is-dragging');
+      }
+    });
+
+    wrap.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      const x = e.pageX - wrap.offsetLeft;
+      const walk = (x - startX);
+      dragged = Math.abs(walk);
+      if (dragged > 5) {
+        wrap.classList.add('is-dragging');
+        e.preventDefault();
+        wrap.scrollLeft = scrollLeftPos - walk;
+      }
+    });
+
+    // Suppress click on drag
+    wrap.addEventListener('click', (e) => {
+      if (dragged > 8) {
+        e.preventDefault();
+        e.stopPropagation();
+        dragged = 0;
+      }
+    }, true);
+
+    // Initial click binding for static pills if rendered before network categories
+    wrap.querySelectorAll('.category-nav-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (dragged > 8) return;
+        const cat = btn.getAttribute('data-cat') || 'all';
+        setCategory(cat);
+        try {
+          btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        } catch (_) { }
+      });
+    });
+  }
+
   // -------------------------------------------------------------
   // EVENT LISTENERS INITIALIZATION
   // -------------------------------------------------------------
@@ -2273,6 +2361,7 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
 
     initEventListeners();
     initCategoryCarousel();
+    initCategoryNavScroll();
     updateCartUI();
 
     // 1. Instant 0ms paint from local cache if returning customer
