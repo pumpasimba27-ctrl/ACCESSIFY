@@ -459,6 +459,16 @@ async function ensureSchema() {
   try { await execute("ALTER TABLE orders ADD COLUMN state TEXT DEFAULT ''"); } catch (_) { }
   try { await execute("ALTER TABLE orders ADD COLUMN pincode TEXT DEFAULT ''"); } catch (_) { }
   try { await execute("ALTER TABLE orders ADD COLUMN landmark TEXT DEFAULT ''"); } catch (_) { }
+
+  // High-performance database indexes for instant querying and sorting
+  try {
+    await execStatements([
+      'CREATE INDEX IF NOT EXISTS idx_products_sec_stat_date ON products(section, status, created_at DESC)',
+      'CREATE INDEX IF NOT EXISTS idx_products_cat ON products(category)',
+      'CREATE INDEX IF NOT EXISTS idx_products_featured ON products(featured)',
+      'CREATE INDEX IF NOT EXISTS idx_categories_sec ON categories(section, display_order)'
+    ]);
+  } catch (_) { }
 }
 
 async function seedInitialDataIfEmpty() {

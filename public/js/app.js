@@ -49,6 +49,47 @@
   let checkoutScreenshotFile = null;
   let isSubmittingOrder = false;
 
+  // Touch device detection (touchscreens never have hover states)
+  const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.matchMedia && window.matchMedia('(hover: none)').matches);
+
+  // -------------------------------------------------------------
+  // HIGH-PERFORMANCE CLIENT-SIDE CACHE ENGINE (STALE-WHILE-REVALIDATE)
+  // -------------------------------------------------------------
+  const FastCache = {
+    get(key) {
+      try {
+        const raw = localStorage.getItem('accessify_c_' + key);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.data) return null;
+        return parsed;
+      } catch (_) { return null; }
+    },
+    set(key, data, version) {
+      try {
+        localStorage.setItem('accessify_c_' + key, JSON.stringify({
+          data,
+          version: version || null,
+          time: Date.now()
+        }));
+      } catch (_) { }
+    },
+    clear(key) {
+      try {
+        if (key) {
+          localStorage.removeItem('accessify_c_' + key);
+        } else {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('accessify_c_')) {
+              localStorage.removeItem(k);
+            }
+          }
+        }
+      } catch (_) { }
+    }
+  };
+
   // DOM Elements Cache
   const el = {
     // Department Switcher Tabs
@@ -258,9 +299,11 @@ Please provide more details about availability and ordering.`;
     // Reset active category filter to all for new section
     currentCategory = 'all';
 
-    // Reload active categories & products for this department
-    await fetchCategories();
-    await fetchProducts();
+    // Reload active categories & products for this department in parallel
+    await Promise.all([
+      fetchCategories(),
+      fetchProducts()
+    ]);
   }
 
   // -------------------------------------------------------------
@@ -268,10 +311,27 @@ Please provide more details about availability and ordering.`;
   // -------------------------------------------------------------
   async function fetchCategories() {
     try {
-      const res = await fetch(`${API_BASE}/categories?section=${encodeURIComponent(currentSection)}&t=${Date.now()}`);
+      const cacheKey = `cats_${currentSection}`;
+      const cached = FastCache.get(cacheKey);
+      const headers = {};
+      if (cached && cached.version) {
+        headers['If-None-Match'] = `W/"cat-${cached.version}-${currentSection || 'all'}"`;
+      }
+
+      const res = await fetch(`${API_BASE}/categories?section=${encodeURIComponent(currentSection)}`, { headers });
+      if (res.status === 304 && cached && cached.data) {
+        allCategories = cached.data;
+        renderHeaderNav();
+        renderCategoryPills();
+        renderMobileCategories();
+        handleVaultCategories();
+        return;
+      }
+
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         allCategories = json.data;
+        FastCache.set(cacheKey, allCategories, json.dbVersion);
         renderHeaderNav();
         renderCategoryPills();
         renderMobileCategories();
@@ -386,6 +446,9 @@ Please provide more details about availability and ordering.`;
 
   async function fetchProducts(silent = false) {
     try {
+      const cacheKey = `prod_${currentSection}_${currentCategory}_${currentSort}_${currentSearchQuery}`;
+      const cached = FastCache.get(cacheKey);
+
       const params = new URLSearchParams();
       params.append('section', currentSection);
       if (currentCategory && currentCategory !== 'all') {
@@ -397,15 +460,36 @@ Please provide more details about availability and ordering.`;
       if (currentSearchQuery) {
         params.append('search', currentSearchQuery);
       }
-      params.append('t', Date.now());
 
-      const res = await fetch(`${API_BASE}/products?${params.toString()}`);
+      const headers = {};
+      if (cached && cached.version) {
+        const querySignature = `${currentSection || 'all'}-${currentCategory || 'all'}-${currentSort || 'default'}-${currentSearchQuery || ''}-default-all-0`;
+        headers['If-None-Match'] = `W/"prod-${cached.version}-${querySignature}"`;
+      }
+
+      const res = await fetch(`${API_BASE}/products?${params.toString()}`, { headers });
+
+      // 304 Not Modified: Cache is up to date!
+      if (res.status === 304 && cached && cached.data) {
+        allProducts = cached.data;
+        currentDbVersion = cached.version;
+        // If skeletons are still showing, replace with cached products
+        if (el.productsGrid && el.productsGrid.querySelector('.skeleton-card')) {
+          renderProductsGrid(allProducts);
+        }
+        return;
+      }
+
       const json = await res.json();
-
       if (json.success && Array.isArray(json.data)) {
         const prevVersion = currentDbVersion;
         allProducts = json.data;
         currentDbVersion = json.dbVersion;
+
+        // Persist to FastCache
+        FastCache.set(cacheKey, allProducts, currentDbVersion);
+
+        // Render products grid immediately
         renderProductsGrid(allProducts);
 
         // Keep open search modal results in sync with live catalogue updates
@@ -440,10 +524,28 @@ Please provide more details about availability and ordering.`;
   async function fetchBestSellingProducts() {
     if (!el.bestSellingTrack) return;
     try {
-      const res = await fetch(`${API_BASE}/best-selling?t=${Date.now()}`);
+      const cacheKey = 'best_selling';
+      const cached = FastCache.get(cacheKey);
+      const headers = {};
+      if (cached && cached.version) {
+        headers['If-None-Match'] = `W/"bs-${cached.version}"`;
+      }
+
+      const res = await fetch(`${API_BASE}/best-selling`, { headers });
+
+      if (res.status === 304 && cached && cached.data) {
+        bestSellingProducts = cached.data;
+        if (el.bestSellingTrack.querySelector('.skeleton-card')) {
+          renderBestSellingSlider(bestSellingProducts);
+        }
+        if (el.bestSellingSection) el.bestSellingSection.style.display = 'block';
+        return;
+      }
+
       const json = await res.json();
       if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
         bestSellingProducts = json.data;
+        FastCache.set(cacheKey, bestSellingProducts, json.dbVersion);
         renderBestSellingSlider(bestSellingProducts);
         if (el.bestSellingSection) el.bestSellingSection.style.display = 'block';
       } else {
@@ -457,8 +559,8 @@ Please provide more details about availability and ordering.`;
   function renderBestSellingSlider(products) {
     if (!el.bestSellingTrack) return;
     let html = '';
-    products.forEach(p => {
-      html += createProductCardHtml(p);
+    products.forEach((p, idx) => {
+      html += createProductCardHtml(p, idx);
     });
     el.bestSellingTrack.innerHTML = html;
     attachCardListeners(el.bestSellingTrack);
@@ -558,10 +660,19 @@ Please provide more details about availability and ordering.`;
   }
 
   // -------------------------------------------------------------
-  // PRODUCTS GRID RENDERING (GENRAGE STYLE)
+  // PRODUCTS GRID RENDERING (FAST PROGRESSIVE CHUNK ENGINE)
   // -------------------------------------------------------------
-  function renderProductsGrid(products) {
+  const BATCH_SIZE = 16;
+  let progressiveRenderTimer = null;
+
+  function renderProductsGrid(products, options = {}) {
     if (!el.productsGrid) return;
+
+    if (progressiveRenderTimer) {
+      clearTimeout(progressiveRenderTimer);
+      if (window.cancelIdleCallback) window.cancelIdleCallback(progressiveRenderTimer);
+      progressiveRenderTimer = null;
+    }
 
     if (el.catalogCount) {
       if (currentSection === 'clothing' && products.length === 0) {
@@ -617,15 +728,51 @@ Please provide more details about availability and ordering.`;
       return;
     }
 
+    const { immediateAll = false } = options;
+
+    // Fast Batch 1: Render first 16 cards immediately (<5ms render time)
+    const initialBatch = products.slice(0, BATCH_SIZE);
     let cardsHtml = '';
-    products.forEach(p => {
-      cardsHtml += createProductCardHtml(p);
+    initialBatch.forEach((p, idx) => {
+      cardsHtml += createProductCardHtml(p, idx);
     });
     el.productsGrid.innerHTML = cardsHtml;
     attachCardListeners(el.productsGrid);
+
+    // If whole list fits in initial batch or caller requested immediate all, finish here
+    if (immediateAll || products.length <= BATCH_SIZE) {
+      return;
+    }
+
+    // Fast Batch 2+: Progressively append remaining cards non-blockingly
+    let offset = BATCH_SIZE;
+    function renderNextSlice() {
+      if (offset >= products.length) return;
+      const nextBatch = products.slice(offset, offset + BATCH_SIZE);
+      let sliceHtml = '';
+      nextBatch.forEach((p, i) => {
+        sliceHtml += createProductCardHtml(p, offset + i);
+      });
+      offset += nextBatch.length;
+      el.productsGrid.insertAdjacentHTML('beforeend', sliceHtml);
+
+      if (offset < products.length) {
+        if (window.requestIdleCallback) {
+          progressiveRenderTimer = window.requestIdleCallback(renderNextSlice, { timeout: 150 });
+        } else {
+          progressiveRenderTimer = setTimeout(renderNextSlice, 25);
+        }
+      }
+    }
+
+    if (window.requestIdleCallback) {
+      progressiveRenderTimer = window.requestIdleCallback(renderNextSlice, { timeout: 100 });
+    } else {
+      progressiveRenderTimer = setTimeout(renderNextSlice, 20);
+    }
   }
 
-  function createProductCardHtml(p) {
+  function createProductCardHtml(p, index = 0) {
     const isSoldOut = p.status === 'sold_out' || (p.stock !== undefined && p.stock <= 0);
     const hasDiscount = p.comparePrice && p.comparePrice > p.price;
     const discountPercent = hasDiscount ? Math.round(((p.comparePrice - p.price) / p.comparePrice) * 100) : 0;
@@ -645,6 +792,16 @@ Please provide more details about availability and ordering.`;
     const priceFormatted = `₹${Number(p.price).toLocaleString('en-IN')}`;
     const mrpFormatted = p.comparePrice ? `₹${Number(p.comparePrice).toLocaleString('en-IN')}` : '';
 
+    // Eager and high priority for top 4 cards visible on initial load
+    const isEager = index < 4;
+    const loadingAttr = isEager ? 'eager' : 'lazy';
+    const priorityAttr = isEager ? 'fetchpriority="high"' : 'fetchpriority="low"';
+
+    // Touchscreens don't have hover states, so omitting secondary image cuts mobile image bandwidth in half!
+    const secondaryImgHtml = (!isTouchDevice && img2 !== img1)
+      ? `<img src="${escapeHtml(img2)}" alt="${escapeHtml(p.name)}" class="product-img product-img-secondary" loading="lazy" decoding="async" width="300" height="400">`
+      : '';
+
     return `
       <article class="product-card" data-id="${p.id}" data-slug="${escapeHtml(p.slug || p.id)}">
         <div class="product-figure">
@@ -652,8 +809,8 @@ Please provide more details about availability and ordering.`;
             ${badgeHtml}
           </div>
           <a href="/?product=${encodeURIComponent(p.slug || p.id)}" class="product-media-link" data-open-pdp="${p.id}">
-            <img src="${escapeHtml(img1)}" alt="${escapeHtml(p.name)}" class="product-img product-img-primary" loading="lazy">
-            <img src="${escapeHtml(img2)}" alt="${escapeHtml(p.name)}" class="product-img product-img-secondary" loading="lazy">
+            <img src="${escapeHtml(img1)}" alt="${escapeHtml(p.name)}" class="product-img product-img-primary" loading="${loadingAttr}" ${priorityAttr} decoding="async" width="300" height="400">
+            ${secondaryImgHtml}
           </a>
         </div>
         <div class="product-info">
@@ -1476,11 +1633,14 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
       }
 
       if (String(incomingVersion) !== String(currentDbVersion) && !isSyncing) {
+        FastCache.clear();
         isSyncing = true;
         try {
-          await fetchCategories();
-          await fetchProducts(true);
-          await fetchBestSellingProducts();
+          await Promise.all([
+            fetchCategories(),
+            fetchProducts(true),
+            fetchBestSellingProducts()
+          ]);
         } finally {
           isSyncing = false;
         }
@@ -2070,6 +2230,37 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
   // -------------------------------------------------------------
   // BOOTSTRAP
   // -------------------------------------------------------------
+  function applyInstantCachedState() {
+    const targetSec = sessionStorage.getItem('accessify_active_section') || currentSection || 'accessories';
+    currentSection = targetSec;
+
+    // 1. Categories
+    const cachedCats = FastCache.get('cats_' + currentSection);
+    if (cachedCats && Array.isArray(cachedCats.data) && cachedCats.data.length > 0) {
+      allCategories = cachedCats.data;
+      renderHeaderNav();
+      renderCategoryPills();
+      renderMobileCategories();
+      handleVaultCategories();
+    }
+
+    // 2. Best Sellers
+    const cachedBs = FastCache.get('best_selling');
+    if (cachedBs && Array.isArray(cachedBs.data) && cachedBs.data.length > 0) {
+      bestSellingProducts = cachedBs.data;
+      renderBestSellingSlider(bestSellingProducts);
+      if (el.bestSellingSection) el.bestSellingSection.style.display = 'block';
+    }
+
+    // 3. Products
+    const cachedProds = FastCache.get(`prod_${currentSection}_all_default_`);
+    if (cachedProds && Array.isArray(cachedProds.data) && cachedProds.data.length > 0) {
+      allProducts = cachedProds.data;
+      currentDbVersion = cachedProds.version;
+      renderProductsGrid(allProducts, { immediateAll: false });
+    }
+  }
+
   async function init() {
     // Purge any stale admin elements from cached DOM
     try {
@@ -2083,9 +2274,17 @@ Customer will attach the payment screenshot manually before sending this WhatsAp
     initEventListeners();
     initCategoryCarousel();
     updateCartUI();
-    loadPaymentConfig();
-    await initSectionRouting();
-    await fetchBestSellingProducts();
+
+    // 1. Instant 0ms paint from local cache if returning customer
+    applyInstantCachedState();
+
+    // 2. Parallel network bootstrap: Launch section routing, best sellers and payment config concurrently
+    await Promise.all([
+      initSectionRouting(),
+      fetchBestSellingProducts(),
+      loadPaymentConfig()
+    ]);
+
     initRealtimeSync();
   }
 

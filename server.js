@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import multer from 'multer';
 import fs from 'fs';
@@ -192,6 +193,7 @@ function isValidImageBuffer(buf) {
 }
 
 // Middleware
+app.use(compression({ threshold: 512 }));
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
@@ -272,12 +274,13 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), uploadsS
 app.use(express.static(PUBLIC_DIR, staticImgOptions));
 app.use(express.static(path.join(process.cwd(), 'public'), staticImgOptions));
 
-// CRITICAL CACHE CONTROL: Prevent stale catalog data across mobile browsers & proxies
+// CRITICAL CACHE CONTROL: Enable conditional validation with ETags for instant 304 hits
 app.use('/api', async (req, res, next) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  res.setHeader('Surrogate-Control', 'no-store');
+  if (req.path.startsWith('/admin')) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  } else {
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  }
   try {
     await ensureInitialized();
     next();
@@ -379,11 +382,14 @@ app.get('/api/version', async (req, res) => {
 
 app.get('/api/categories', async (req, res) => {
   const { section } = req.query;
-  const [categories, dbVersion] = await Promise.all([
-    getAllCategories(section),
-    getDbVersion()
-  ]);
+  const dbVersion = await getDbVersion();
+  const etag = `W/"cat-${dbVersion}-${section || 'all'}"`;
+  res.setHeader('ETag', etag);
   res.setHeader('X-DB-Version', String(dbVersion));
+  if (req.headers['if-none-match'] === etag) {
+    return res.status(304).end();
+  }
+  const categories = await getAllCategories(section);
   res.json({
     success: true,
     data: categories,
@@ -393,6 +399,16 @@ app.get('/api/categories', async (req, res) => {
 
 app.get('/api/products', async (req, res) => {
   const { section, category, search, sort, status, featured, limit, offset } = req.query;
+  const dbVersion = await getDbVersion();
+  const querySignature = `${section || 'all'}-${category || 'all'}-${sort || 'default'}-${search || ''}-${status || 'default'}-${limit || 'all'}-${offset || '0'}`;
+  const etag = `W/"prod-${dbVersion}-${querySignature}"`;
+  res.setHeader('ETag', etag);
+  res.setHeader('X-DB-Version', String(dbVersion));
+
+  if (req.headers['if-none-match'] === etag) {
+    return res.status(304).end();
+  }
+
   const result = await getProducts({
     section,
     category,
@@ -405,7 +421,6 @@ app.get('/api/products', async (req, res) => {
     includeHidden: false
   });
 
-  res.setHeader('X-DB-Version', String(result.version));
   res.json({
     success: true,
     dbVersion: result.version,
@@ -474,8 +489,14 @@ app.get('/api/payment-config', async (req, res) => {
 
 app.get('/api/best-selling', async (req, res) => {
   try {
-    const result = await getBestSellingProducts();
     const dbVersion = await getDbVersion();
+    const etag = `W/"bs-${dbVersion}"`;
+    res.setHeader('ETag', etag);
+    res.setHeader('X-DB-Version', String(dbVersion));
+    if (req.headers['if-none-match'] === etag) {
+      return res.status(304).end();
+    }
+    const result = await getBestSellingProducts();
     res.json({
       success: true,
       mode: result.mode,
